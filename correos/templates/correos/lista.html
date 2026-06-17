@@ -1,0 +1,213 @@
+{% extends "core/base.html" %}
+{% block title %}Gestión de Correos{% endblock %}
+{% block extra_css %}
+<style>
+.correo-row.critico { background: #fef2f2; border-left: 3px solid #dc2626; }
+.correo-row.proximo { background: #fffbeb; border-left: 3px solid #d97706; }
+.plazo-critico { color: #dc2626; font-weight: 700; }
+.plazo-proximo { color: #d97706; font-weight: 700; }
+.plazo-ok { color: #16a34a; }
+.toggle-btn { width: 18px; height: 18px; cursor: pointer; accent-color: #1a3a5c; }
+.revision-select { font-size: .78rem; padding: .2rem .4rem; border-radius: 4px; border: 1px solid #e2e8f0; background: #f8fafc; }
+.search-box { position: relative; flex: 1; min-width: 200px; }
+.search-box input { width: 100%; padding-left: 2rem; }
+.search-box::before { content: '🔍'; position: absolute; left: .5rem; top: 50%; transform: translateY(-50%); font-size: .85rem; }
+.btn-tab { padding: .4rem .9rem; border-radius: 20px; border: 1px solid #e2e8f0; background: #fff; cursor: pointer; font-size: .82rem; text-decoration: none; color: #475569; }
+.btn-tab.active { background: #1a3a5c; color: #fff; border-color: #1a3a5c; }
+.responsable-avatar { width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: .75rem; font-weight: 700; color: #fff; background: #2563a8; }
+</style>
+{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>📧 Gestión de Correos</h1>
+    <div style="font-size:.8rem;color:#94a3b8">Sesión activa: {{ request.user.username }}</div>
+  </div>
+  <div class="actions">
+    <a href="{% url 'nuevo_correo' %}" class="btn btn-primary">+ Nuevo Correo</a>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-grid" style="grid-template-columns:repeat(4,1fr)">
+  <div class="stat-card blue"><div class="stat-num">{{ stats.total }}</div><div class="stat-label">TOTAL</div></div>
+  <div class="stat-card orange"><div class="stat-num">{{ stats.pendientes }}</div><div class="stat-label">⏰ PENDIENTES</div></div>
+  <div class="stat-card green"><div class="stat-num">{{ stats.ejecutados }}</div><div class="stat-label">✅ EJECUTADOS</div></div>
+  <div class="stat-card blue"><div class="stat-num">{{ stats.respondidos }}</div><div class="stat-label">💬 RESPONDIDOS</div></div>
+</div>
+
+<!-- Filtros -->
+<div class="filter-bar" style="align-items:flex-end">
+  <form method="get" style="display:contents" id="filter-form">
+    <div class="search-box">
+      <input type="text" name="q" value="{{ filtros.q }}" class="form-control" placeholder="Buscar cliente o asunto…" oninput="debounceFilter()">
+    </div>
+    <div class="form-group" style="margin:0;min-width:130px">
+      <label>Responsable</label>
+      <select name="responsable" class="form-control" onchange="this.form.submit()">
+        <option value="">Todos</option>
+        {% for u in usuarios %}<option value="{{ u.pk }}" {% if filtros.responsable == u.pk|stringformat:'s' %}selected{% endif %}>{{ u.username }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="form-group" style="margin:0;min-width:130px">
+      <label>Estado</label>
+      <select name="estado" class="form-control" onchange="this.form.submit()">
+        <option value="">Todos</option>
+        {% for val, label in estados %}<option value="{{ val }}" {% if filtros.estado == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="form-group" style="margin:0">
+      <label>Desde</label>
+      <input type="date" name="desde" value="{{ filtros.desde }}" class="form-control" onchange="this.form.submit()">
+    </div>
+    <div class="form-group" style="margin:0">
+      <label>Hasta</label>
+      <input type="date" name="hasta" value="{{ filtros.hasta }}" class="form-control" onchange="this.form.submit()">
+    </div>
+    <a href="{% url 'lista_correos' %}" class="btn btn-sm">Limpiar</a>
+    <input type="hidden" name="vista" value="{{ filtros.vista }}">
+  </form>
+</div>
+
+<!-- Tabs -->
+<div style="display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap">
+  <a href="?vista=todos&q={{ filtros.q }}" class="btn-tab {% if filtros.vista == 'todos' or not filtros.vista %}active{% endif %}">Todos</a>
+  <a href="?vista=pendientes&q={{ filtros.q }}" class="btn-tab {% if filtros.vista == 'pendientes' %}active{% endif %}">Pendientes</a>
+  <a href="?vista=criticos&q={{ filtros.q }}" class="btn-tab {% if filtros.vista == 'criticos' %}active{% endif %}">⚠ Críticos</a>
+</div>
+
+<!-- Tabla -->
+<div class="card" style="padding:0;overflow:hidden">
+  <div class="table-wrap">
+    <table class="table" id="correos-table">
+      <thead>
+        <tr>
+          <th>INFORMACIÓN DEL CLIENTE</th>
+          <th>PLAZO</th>
+          <th>RESPONSABLE</th>
+          <th>REVISIÓN</th>
+          <th>ESTADOS</th>
+          <th>ACCIÓN</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for item in correos %}
+      {% with c=item.obj alerta=item.alerta dias=item.dias %}
+      <tr class="correo-row {{ alerta }}" id="row-{{ c.pk }}">
+        <td>
+          <div style="font-weight:700;font-size:.9rem">{{ c.cliente }}</div>
+          <div style="color:#64748b;font-size:.82rem">{{ c.asunto|truncatechars:70 }}</div>
+          <div style="color:#94a3b8;font-size:.75rem">📅 Recibido: {{ c.fecha_recibido|date:"Y-m-d" }}</div>
+        </td>
+        <td>
+          {% if c.estado == 'respondido' or c.estado == 'gestionado' %}
+            <span style="color:#16a34a;font-weight:600">✅ Finalizado</span>
+          {% elif c.esta_vencido %}
+            <span class="badge" style="background:#fee2e2;color:#991b1b;padding:.3rem .6rem">VENCIDO ({{ dias }}d)</span>
+          {% elif dias is not None %}
+            <span class="plazo-{% if alerta == 'critico' %}critico{% elif alerta == 'proximo' %}proximo{% else %}ok{% endif %}">
+              ⏱ {{ dias }} día{{ dias|pluralize }} hábil{{ dias|pluralize:"es" }}
+            </span>
+          {% endif %}
+          {% if c.fecha_limite %}
+          <div style="font-size:.73rem;color:#94a3b8">Límite: {{ c.fecha_limite|date:"d/m/Y" }}</div>
+          {% endif %}
+        </td>
+        <td>
+          {% if c.responsable %}
+          <div style="display:flex;align-items:center;gap:.5rem">
+            <div class="responsable-avatar">{{ c.responsable.username|first|upper }}{{ c.responsable.username|slice:"1:2"|upper }}</div>
+            <span style="font-size:.85rem">{{ c.responsable.username }}</span>
+          </div>
+          {% else %}
+          <span style="color:#94a3b8;font-size:.82rem">Sin asignar</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if request.user.is_superuser %}
+          <select class="revision-select" onchange="cambiarRevision({{ c.pk }}, this.value)">
+            {% for val, label in c.REVISION_CHOICES %}
+            <option value="{{ val }}" {% if c.revision == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+          {% else %}
+          <span class="badge {% if c.revision == 'revisado' %}badge-aprobada{% elif c.revision == 'omitido' %}badge-cerrada{% else %}badge-pendiente{% endif %}">
+            {{ c.get_revision_display }}
+          </span>
+          {% endif %}
+        </td>
+        <td>
+          <div style="display:flex;flex-direction:column;gap:.4rem">
+            <label style="display:flex;align-items:center;gap:.4rem;font-size:.82rem;cursor:pointer">
+              <input type="checkbox" class="toggle-btn" {% if c.ejecutado %}checked{% endif %}
+                data-campo="ejecutado" onchange="cambiarEstado({{ c.pk }}, this.dataset.campo, this.checked)"
+                {% if not request.user.is_superuser and c.ejecutado %}disabled{% endif %}>
+              <span class="badge {% if c.ejecutado %}badge-aprobada{% else %}badge-pendiente{% endif %}" id="badge-ej-{{ c.pk }}">
+                Ejecutado
+              </span>
+            </label>
+            <label style="display:flex;align-items:center;gap:.4rem;font-size:.82rem;cursor:pointer">
+              <input type="checkbox" class="toggle-btn" {% if c.respondido %}checked{% endif %}
+                onchange="cambiarEstado({{ c.pk }}, 'respondido', this.checked)"
+                {% if not request.user.is_superuser and c.respondido %}disabled{% endif %}>
+              <span class="badge {% if c.respondido %}badge-aprobada{% else %}badge-pendiente{% endif %}" id="badge-res-{{ c.pk }}">
+                Respondido
+              </span>
+            </label>
+          </div>
+        </td>
+        <td>
+          <div style="display:flex;gap:.3rem;flex-wrap:wrap">
+            <a href="{% url 'detalle_correo' c.pk %}" class="btn btn-sm">👁</a>
+            {% if request.user.is_superuser %}
+            <a href="{% url 'editar_correo' c.pk %}" class="btn btn-sm btn-primary">✏</a>
+            <form method="post" action="{% url 'eliminar_correo' c.pk %}" onsubmit="return confirm('¿Eliminar este correo?')">
+              {% csrf_token %}<button class="btn btn-sm btn-red">🗑</button>
+            </form>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% endwith %}
+      {% empty %}
+      <tr class="empty-row"><td colspan="6">No hay correos con los filtros aplicados.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const csrf = '{{ csrf_token }}';
+
+async function cambiarEstado(pk, campo, valor) {
+  const res = await fetch(`/correos/${pk}/estado/`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': csrf},
+    body: `campo=${campo}&valor=${valor}`
+  });
+  const data = await res.json();
+  if (data.ok) {
+    const badge = document.getElementById(campo === 'ejecutado' ? `badge-ej-${pk}` : `badge-res-${pk}`);
+    if (badge) {
+      badge.className = `badge ${valor ? 'badge-aprobada' : 'badge-pendiente'}`;
+    }
+  }
+}
+
+async function cambiarRevision(pk, valor) {
+  await fetch(`/correos/${pk}/revision/`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': csrf},
+    body: `revision=${valor}`
+  });
+}
+
+let debTimer;
+function debounceFilter() {
+  clearTimeout(debTimer);
+  debTimer = setTimeout(() => document.getElementById('filter-form').submit(), 500);
+}
+</script>
+{% endblock %}

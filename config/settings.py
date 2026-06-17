@@ -19,6 +19,7 @@ INSTALLED_APPS = [
     'core',
     'asistencia',
     'materiales',
+    'correos',
 ]
 
 MIDDLEWARE = [

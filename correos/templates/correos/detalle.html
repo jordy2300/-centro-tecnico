@@ -1,0 +1,58 @@
+{% extends "core/base.html" %}
+{% block title %}Detalle Correo{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>📧 {{ correo.cliente }}</h1>
+  <div class="actions">
+    {% if request.user.is_superuser %}
+    <a href="{% url 'editar_correo' correo.pk %}" class="btn btn-primary">✏ Editar</a>
+    {% endif %}
+    <a href="{% url 'lista_correos' %}" class="btn">← Volver</a>
+  </div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+  <div class="card">
+    <h2 style="color:var(--primary);margin-bottom:1rem;font-size:.95rem">Información del Correo</h2>
+    <table style="width:100%;font-size:.88rem">
+      <tr><td style="color:#64748b;padding:.4rem 0;width:40%">Cliente</td><td><strong>{{ correo.cliente }}</strong></td></tr>
+      <tr><td style="color:#64748b;padding:.4rem 0">Asunto</td><td>{{ correo.asunto }}</td></tr>
+      <tr><td style="color:#64748b;padding:.4rem 0">Fecha Recibido</td><td>{{ correo.fecha_recibido|date:"d/m/Y" }}</td></tr>
+      <tr><td style="color:#64748b;padding:.4rem 0">Fecha Límite</td><td><strong>{{ correo.fecha_limite|date:"d/m/Y" }}</strong></td></tr>
+      <tr><td style="color:#64748b;padding:.4rem 0">Días Restantes</td><td>
+        {% with dias=correo.dias_restantes %}
+        {% if correo.esta_vencido %}<span style="color:#dc2626;font-weight:700">VENCIDO</span>
+        {% else %}<span style="color:#16a34a;font-weight:700">{{ dias }} día{{ dias|pluralize }} hábil{{ dias|pluralize:"es" }}</span>{% endif %}
+        {% endwith %}
+      </td></tr>
+      <tr><td style="color:#64748b;padding:.4rem 0">Responsable</td><td>{{ correo.responsable.username|default:"Sin asignar" }}</td></tr>
+      <tr><td style="color:#64748b;padding:.4rem 0">Estado</td><td><span class="badge badge-{{ correo.estado }}">{{ correo.get_estado_display }}</span></td></tr>
+      <tr><td style="color:#64748b;padding:.4rem 0">Revisión</td><td>{{ correo.get_revision_display }}</td></tr>
+      <tr><td style="color:#64748b;padding:.4rem 0">Ejecutado</td><td>{% if correo.ejecutado %}✅ Sí{% else %}❌ No{% endif %}</td></tr>
+      <tr><td style="color:#64748b;padding:.4rem 0">Respondido</td><td>{% if correo.respondido %}✅ Sí{% else %}❌ No{% endif %}</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h2 style="color:var(--primary);margin-bottom:1rem;font-size:.95rem">Observaciones</h2>
+    <p style="font-size:.88rem;color:#374151">{{ correo.observaciones|default:"Sin observaciones." }}</p>
+  </div>
+</div>
+{% if historial %}
+<div class="card">
+  <h2 style="color:var(--primary);margin-bottom:1rem;font-size:.95rem">📜 Historial de Cambios</h2>
+  <table class="table">
+    <thead><tr><th>Fecha</th><th>Usuario</th><th>Campo</th><th>Anterior</th><th>Nuevo</th></tr></thead>
+    <tbody>
+    {% for h in historial %}
+    <tr>
+      <td style="font-size:.8rem">{{ h.fecha|date:"d/m/Y H:i" }}</td>
+      <td>{{ h.usuario.username|default:"—" }}</td>
+      <td>{{ h.campo }}</td>
+      <td style="color:#dc2626">{{ h.valor_anterior }}</td>
+      <td style="color:#16a34a">{{ h.valor_nuevo }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,48 @@
+from django.conf import settings
+from django.db import migrations, models
+import django.db.models.deletion
+
+
+class Migration(migrations.Migration):
+
+    initial = True
+
+    dependencies = [
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+    ]
+
+    operations = [
+        migrations.CreateModel(
+            name='Correo',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('cliente', models.CharField(max_length=200)),
+                ('asunto', models.CharField(max_length=500)),
+                ('fecha_recibido', models.DateField()),
+                ('fecha_limite', models.DateField(blank=True, null=True)),
+                ('estado', models.CharField(choices=[('pendiente', 'Pendiente'), ('en_revision', 'En Revisión'), ('gestionado', 'Gestionado'), ('respondido', 'Respondido'), ('vencido', 'Vencido')], default='pendiente', max_length=20)),
+                ('revision', models.CharField(choices=[('pendiente', 'Pend. Revisión'), ('omitido', 'Omitido'), ('revisado', 'Revisado')], default='pendiente', max_length=20)),
+                ('ejecutado', models.BooleanField(default=False)),
+                ('respondido', models.BooleanField(default=False)),
+                ('observaciones', models.TextField(blank=True)),
+                ('creado', models.DateTimeField(auto_now_add=True)),
+                ('actualizado', models.DateTimeField(auto_now=True)),
+                ('creado_por', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='correos_creados', to=settings.AUTH_USER_MODEL)),
+                ('responsable', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='correos_asignados', to=settings.AUTH_USER_MODEL)),
+            ],
+            options={'verbose_name': 'Correo', 'verbose_name_plural': 'Correos', 'ordering': ['fecha_limite', 'fecha_recibido']},
+        ),
+        migrations.CreateModel(
+            name='HistorialCorreo',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('campo', models.CharField(max_length=50)),
+                ('valor_anterior', models.CharField(blank=True, max_length=200)),
+                ('valor_nuevo', models.CharField(blank=True, max_length=200)),
+                ('fecha', models.DateTimeField(auto_now_add=True)),
+                ('correo', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='historial', to='correos.correo')),
+                ('usuario', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, to=settings.AUTH_USER_MODEL)),
+            ],
+            options={'ordering': ['-fecha']},
+        ),
+    ]
