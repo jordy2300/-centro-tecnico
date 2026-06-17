@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% if sol %}Editar{% else %}Nueva{% endif %} Solicitud</title>
+{% load static %}
+<link rel="stylesheet" href="{% static 'core/css/main.css' %}">
+</head>
+<body class="mobile-wrap">
+<div class="mobile-header">
+  <a href="{% url 'tecnico_solicitudes' %}" style="color:#fff;text-decoration:none;margin-right:.5rem">←</a>
+  <span style="font-size:1.3rem">{% if sol %}✏{% else %}+{% endif %}</span>
+  <h1 style="font-size:.95rem">{% if sol %}Editar Solicitud{% else %}Nueva Solicitud{% endif %} — {{ cuadrilla.movil }}</h1>
+</div>
+
+<form method="post" id="solicitud-form">
+{% csrf_token %}
+<input type="hidden" name="items_json" id="items-json" value="[]">
+
+<div class="mobile-card-tech">
+  <h2>🔍 Agregar Material</h2>
+  <div class="form-group">
+    <label>Buscar material</label>
+    <div class="search-material-wrap">
+      <input type="text" id="search-input" class="form-control" placeholder="Escriba nombre del material…" autocomplete="off">
+      <div class="search-results" id="search-results"></div>
+    </div>
+    <div id="material-seleccionado" class="hidden" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:.6rem;margin-top:.5rem;font-size:.85rem">
+      <strong id="mat-nombre"></strong><br>
+      <span style="color:#94a3b8;font-size:.75rem" id="mat-codigo"></span>
+    </div>
+  </div>
+  <div class="form-row">
+    <div class="form-group">
+      <label>Cantidad</label>
+      <input type="number" id="cantidad-input" class="form-control" value="1" min="0.01" step="0.01">
+    </div>
+    <div class="form-group">
+      <label>Tipo</label>
+      <select id="acobro-input" class="form-control">
+        <option value="sin_cobro">Sin Cobro</option>
+        <option value="cobro">A Cobro</option>
+      </select>
+    </div>
+  </div>
+  <div class="form-group">
+    <label>Serie (opcional)</label>
+    <input type="text" id="serie-input" class="form-control" placeholder="Número de serie…">
+  </div>
+  <button type="button" class="btn btn-primary btn-block" onclick="agregarItem()">+ Agregar a la lista</button>
+</div>
+
+<div class="mobile-card-tech" id="lista-card">
+  <h2>📋 Lista de Materiales <span id="count-badge" style="background:#e0f2fe;color:#0369a1;border-radius:20px;padding:.1rem .5rem;font-size:.75rem">0</span></h2>
+  <div id="item-list-container">
+    <p style="text-align:center;color:#94a3b8;font-size:.85rem;padding:.5rem" id="empty-msg">Aún no ha agregado materiales.</p>
+  </div>
+</div>
+
+<div style="padding:0 1rem 2rem">
+  <button type="submit" class="btn btn-green btn-block" style="padding:.8rem;font-size:1rem" onclick="return validarEnvio()">
+    {% if sol %}💾 Actualizar Solicitud{% else %}📤 Enviar Solicitud{% endif %}
+  </button>
+</div>
+</form>
+
+<script>
+let items = {{ items_existentes|default:"[]"|safe }};
+let materialSeleccionado = null;
+let searchTimeout = null;
+
+// Inicializar con items existentes
+renderItems();
+
+document.getElementById('search-input').addEventListener('input', function() {
+  clearTimeout(searchTimeout);
+  const q = this.value.trim();
+  if (q.length < 2) { closeResults(); return; }
+  searchTimeout = setTimeout(() => buscarMaterial(q), 300);
+});
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.search-material-wrap')) closeResults();
+});
+
+async function buscarMaterial(q) {
+  const res = await fetch(`/materiales/api/materiales/?q=${encodeURIComponent(q)}`);
+  const data = await res.json();
+  const container = document.getElementById('search-results');
+  if (!data.results.length) { container.innerHTML = '<div class="search-item" style="color:#94a3b8">Sin resultados</div>'; container.classList.add('open'); return; }
+  container.innerHTML = data.results.map(m =>
+    `<div class="search-item" onclick="seleccionarMaterial(${m.id}, '${escHtml(m.codigo)}', '${escHtml(m.descripcion)}', '${escHtml(m.unidad)}')">
+      <div class="mat-desc">${escHtml(m.descripcion)}</div>
+      <div class="mat-code">${escHtml(m.codigo)} · ${escHtml(m.unidad)}</div>
+    </div>`
+  ).join('');
+  container.classList.add('open');
+}
+
+function escHtml(s) { return String(s).replace(/'/g,"&#39;").replace(/"/g,"&quot;"); }
+
+function seleccionarMaterial(id, codigo, descripcion, unidad) {
+  materialSeleccionado = {material_id: id, codigo, descripcion, unidad};
+  document.getElementById('mat-nombre').textContent = descripcion;
+  document.getElementById('mat-codigo').textContent = codigo + ' · ' + unidad;
+  document.getElementById('material-seleccionado').classList.remove('hidden');
+  document.getElementById('search-input').value = descripcion;
+  closeResults();
+}
+
+function closeResults() { document.getElementById('search-results').classList.remove('open'); }
+
+function agregarItem() {
+  if (!materialSeleccionado) { alert('Seleccione un material de la búsqueda.'); return; }
+  const cantidad = parseFloat(document.getElementById('cantidad-input').value);
+  if (!cantidad || cantidad <= 0) { alert('Ingrese una cantidad válida.'); return; }
+  const acobro = document.getElementById('acobro-input').value;
+  const serie = document.getElementById('serie-input').value.trim();
+
+  // Evitar duplicados
+  const idx = items.findIndex(i => i.material_id === materialSeleccionado.material_id);
+  if (idx >= 0) { items[idx].cantidad += cantidad; }
+  else { items.push({...materialSeleccionado, cantidad, acobro, serie}); }
+
+  renderItems();
+  // Limpiar
+  document.getElementById('search-input').value = '';
+  document.getElementById('cantidad-input').value = '1';
+  document.getElementById('serie-input').value = '';
+  document.getElementById('material-seleccionado').classList.add('hidden');
+  materialSeleccionado = null;
+}
+
+function eliminarItem(idx) { items.splice(idx, 1); renderItems(); }
+
+function renderItems() {
+  const container = document.getElementById('item-list-container');
+  document.getElementById('count-badge').textContent = items.length;
+  document.getElementById('items-json').value = JSON.stringify(items);
+  if (!items.length) {
+    container.innerHTML = '<p style="text-align:center;color:#94a3b8;font-size:.85rem;padding:.5rem">Aún no ha agregado materiales.</p>';
+    return;
+  }
+  container.innerHTML = items.map((it, i) => `
+    <div style="display:flex;align-items:center;gap:.5rem;padding:.6rem 0;border-bottom:1px solid #f1f5f9">
+      <div style="flex:1">
+        <div style="font-weight:600;font-size:.85rem">${escHtml(it.descripcion)}</div>
+        <div style="font-size:.75rem;color:#94a3b8">${escHtml(it.codigo)} · ${it.acobro === 'cobro' ? 'A cobro' : 'Sin cobro'}</div>
+      </div>
+      <div style="font-weight:700;white-space:nowrap">× ${it.cantidad}</div>
+      <button type="button" onclick="eliminarItem(${i})" style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:1.1rem">🗑</button>
+    </div>
+  `).join('');
+}
+
+function validarEnvio() {
+  if (!items.length) { alert('Debe agregar al menos un material.'); return false; }
+  return true;
+}
+</script>
+</body>
+</html>

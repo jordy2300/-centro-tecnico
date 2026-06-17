@@ -1,0 +1,23 @@
+{% extends "core/base.html" %}
+{% block title %}Inicio — CentroTécnico{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Bienvenido, {{ request.user.username }}</h1>
+</div>
+<div class="stats-grid">
+  <a href="{% url 'asistencia_panel' %}" style="text-decoration:none">
+    <div class="stat-card blue" style="cursor:pointer;transition:transform .15s" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+      <div style="font-size:2.5rem;margin-bottom:.5rem">📋</div>
+      <div class="stat-label" style="font-size:.95rem;font-weight:600;color:#1a3a5c">Asistencia QR</div>
+      <div class="stat-label">Control de asistencia con QR</div>
+    </div>
+  </a>
+  <a href="{% url 'materiales_panel' %}" style="text-decoration:none">
+    <div class="stat-card green" style="cursor:pointer;transition:transform .15s" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+      <div style="font-size:2.5rem;margin-bottom:.5rem">📦</div>
+      <div class="stat-label" style="font-size:.95rem;font-weight:600;color:#16a34a">Materiales</div>
+      <div class="stat-label">Solicitudes y entregas</div>
+    </div>
+  </a>
+</div>
+{% endblock %}

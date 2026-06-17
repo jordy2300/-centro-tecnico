@@ -1,0 +1,20 @@
+<!-- Descarga por cuadrilla y fecha -->
+<div class="card" style="margin-bottom:1rem;background:#f0fdf4;border:1px solid #bbf7d0">
+  <div class="card-header"><h2>📥 Descargar Plantilla por Cuadrilla</h2></div>
+  <form method="get" action="{% url 'exportar_plantilla' %}" style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:flex-end">
+    <div class="form-group" style="margin:0;flex:1;min-width:160px">
+      <label>Cuadrilla</label>
+      <select name="cuadrilla" class="form-control" required>
+        <option value="">Seleccione…</option>
+        {% for c in cuadrillas %}
+        <option value="{{ c.pk }}">{{ c.movil }} — {{ c.nombre }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group" style="margin:0">
+      <label>Fecha</label>
+      <input type="date" name="fecha" class="form-control" required>
+    </div>
+    <button type="submit" class="btn btn-green">⬇ Descargar Plantilla</button>
+  </form>
+</div>

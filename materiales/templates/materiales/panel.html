@@ -1,0 +1,51 @@
+{% extends "core/base.html" %}
+{% block title %}Materiales — Panel{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>📦 Módulo Materiales</h1>
+  <div class="actions">
+    <a href="{% url 'importar_materiales' %}" class="btn btn-primary" onclick="return confirm('¿Importar lista de materiales?')">📥 Importar Materiales</a>
+    <a href="{% url 'gestion_cuadrillas' %}" class="btn">👥 Cuadrillas</a>
+    <a href="{% url 'almacen_panel' %}" class="btn btn-orange">🏪 Panel Almacén</a>
+  </div>
+</div>
+<div class="stats-grid">
+  <div class="stat-card blue"><div class="stat-num">{{ total }}</div><div class="stat-label">Total Solicitudes</div></div>
+  <div class="stat-card yellow"><div class="stat-num">{{ pendientes }}</div><div class="stat-label">Pendientes Revisión</div></div>
+  <div class="stat-card green"><div class="stat-num">{{ aprobadas }}</div><div class="stat-label">Aprobadas</div></div>
+  <div class="stat-card orange"><div class="stat-num">{{ en_entrega }}</div><div class="stat-label">En Entrega</div></div>
+</div>
+<div class="card">
+  <div class="card-header">
+    <h2>Solicitudes Recientes</h2>
+    <a href="{% url 'lista_solicitudes' %}" class="btn btn-sm">Ver todas →</a>
+  </div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>ID</th><th>Móvil</th><th>Técnico</th><th>Fecha</th><th>Items</th><th>Estado</th><th>Acción</th></tr></thead>
+      <tbody>
+      {% for s in recientes %}
+      <tr>
+        <td><code>{{ s.id_corto }}</code></td>
+        <td><strong>{{ s.cuadrilla.movil }}</strong></td>
+        <td>{{ s.cuadrilla.nombre }}</td>
+        <td>{{ s.fecha_solicitud|date:"d/m/Y" }}</td>
+        <td>{{ s.total_items }}</td>
+        <td><span class="badge badge-{{ s.estado }}">{{ s.get_estado_display }}</span></td>
+        <td>
+          <a href="{% url 'detalle_solicitud' s.pk %}" class="btn btn-sm">Ver</a>
+          {% if s.estado == 'pendiente' %}
+          <form method="post" action="{% url 'aprobar_solicitud' s.pk %}" style="display:inline">
+            {% csrf_token %}<button class="btn btn-sm btn-green">✔ Aprobar</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr class="empty-row"><td colspan="7">No hay solicitudes todavía.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

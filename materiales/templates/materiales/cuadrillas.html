@@ -1,0 +1,38 @@
+{% extends "core/base.html" %}
+{% block title %}Cuadrillas{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>👥 Cuadrillas</h1>
+  <a href="{% url 'materiales_panel' %}" class="btn">← Volver</a>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+  <div class="card">
+    <h2 style="margin-bottom:1rem;color:var(--primary)">Nueva / Actualizar Cuadrilla</h2>
+    <form method="post" action="{% url 'crear_cuadrilla' %}">
+      {% csrf_token %}
+      <div class="form-group"><label>Código de acceso (ej: 0001)</label><input type="text" name="codigo" class="form-control" required placeholder="0001"></div>
+      <div class="form-group"><label>Nombre del técnico</label><input type="text" name="nombre" class="form-control" required placeholder="Juan Pérez"></div>
+      <div class="form-group"><label>Móvil / Cuadrilla</label><input type="text" name="movil" class="form-control" required placeholder="C01"></div>
+      <button type="submit" class="btn btn-primary">Guardar</button>
+    </form>
+  </div>
+  <div class="card">
+    <h2 style="margin-bottom:1rem;color:var(--primary)">Cuadrillas Registradas</h2>
+    <table class="table">
+      <thead><tr><th>Código</th><th>Nombre</th><th>Móvil</th><th>Estado</th></tr></thead>
+      <tbody>
+      {% for c in cuadrillas %}
+      <tr>
+        <td><code>{{ c.codigo }}</code></td>
+        <td>{{ c.nombre }}</td>
+        <td><strong>{{ c.movil }}</strong></td>
+        <td><span class="badge badge-{% if c.activo %}aprobada{% else %}rechazado{% endif %}">{% if c.activo %}Activa{% else %}Inactiva{% endif %}</span></td>
+      </tr>
+      {% empty %}
+      <tr class="empty-row"><td colspan="4">No hay cuadrillas registradas.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

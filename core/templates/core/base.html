@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Centro Técnico{% endblock %}</title>
+{% load static %}
+<link rel="stylesheet" href="{% static 'core/css/main.css' %}">
+{% block extra_css %}{% endblock %}
+</head>
+<body>
+<nav class="navbar">
+  <div class="nav-brand">⚡ <span>Centro</span>Técnico</div>
+  <div class="nav-modulos">
+    <button onclick="toggleMenu()">📦 Módulos ▾</button>
+    <div class="dropdown-menu" id="modMenu">
+      <a href="{% url 'inicio' %}"><span class="mod-icon">🏠</span> Inicio</a>
+      <a href="{% url 'asistencia_panel' %}"><span class="mod-icon">📋</span> Asistencia QR</a>
+      <a href="{% url 'materiales_panel' %}"><span class="mod-icon">📦</span> Materiales</a>
+    </div>
+  </div>
+  <div class="nav-right">
+    <span class="nav-user">👤 {{ request.user.username }}</span>
+    <a href="{% url 'logout' %}" class="nav-logout">Salir</a>
+  </div>
+</nav>
+<div class="container">
+  {% for message in messages %}
+  <div class="alert alert-{% if message.tags == 'error' %}error{% elif message.tags == 'success' %}success{% else %}info{% endif %}">{{ message }}</div>
+  {% endfor %}
+  {% block content %}{% endblock %}
+</div>
+<script>
+function toggleMenu() {
+  document.getElementById('modMenu').classList.toggle('open');
+}
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.nav-modulos')) {
+    document.getElementById('modMenu').classList.remove('open');
+  }
+});
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

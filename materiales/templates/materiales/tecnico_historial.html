@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Historial</title>
+{% load static %}
+<link rel="stylesheet" href="{% static 'core/css/main.css' %}">
+</head>
+<body class="mobile-wrap">
+<div class="mobile-header">
+  <a href="{% url 'tecnico_solicitudes' %}" style="color:#fff;text-decoration:none;margin-right:.5rem">←</a>
+  <span style="font-size:1.3rem">📜</span>
+  <h1 style="font-size:.95rem">Historial — {{ cuadrilla.movil }}</h1>
+</div>
+{% for sol in solicitudes %}
+<div class="mobile-card-tech">
+  <div style="display:flex;justify-content:space-between;margin-bottom:.6rem">
+    <span style="font-weight:700">{{ sol.fecha_solicitud|date:"d/m/Y" }}</span>
+    <span class="badge badge-{{ sol.estado }}">{{ sol.get_estado_display }}</span>
+  </div>
+  {% for item in sol.items.all %}
+  <div style="font-size:.83rem;padding:.3rem 0;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between">
+    <span>{{ item.material.descripcion }}</span>
+    <span style="font-weight:600">× {{ item.cantidad_solicitada }}</span>
+  </div>
+  {% endfor %}
+  {% if sol.observaciones %}
+  <div style="margin-top:.5rem;font-size:.8rem;color:#64748b;background:#f8fafc;padding:.4rem;border-radius:4px">📝 {{ sol.observaciones }}</div>
+  {% endif %}
+</div>
+{% empty %}
+<div class="mobile-card-tech" style="text-align:center;color:#94a3b8">No hay solicitudes en el historial.</div>
+{% endfor %}
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mis Solicitudes</title>
+{% load static %}
+<link rel="stylesheet" href="{% static 'core/css/main.css' %}">
+</head>
+<body class="mobile-wrap">
+<div class="mobile-header">
+  <span style="font-size:1.5rem">📦</span>
+  <div>
+    <h1>{{ cuadrilla.movil }} — {{ cuadrilla.nombre }}</h1>
+    <div style="font-size:.75rem;opacity:.8">Solicitudes de Materiales</div>
+  </div>
+  <a href="{% url 'tecnico_logout' %}" style="margin-left:auto;color:rgba(255,255,255,.7);font-size:.8rem">Salir</a>
+</div>
+
+<div style="padding:1rem;display:flex;gap:.5rem;flex-wrap:wrap">
+  <a href="{% url 'tecnico_nueva_solicitud' %}" class="btn btn-primary">+ Nueva Solicitud</a>
+  <a href="{% url 'tecnico_historial' %}" class="btn">📜 Historial</a>
+</div>
+
+{% for message in messages %}
+<div style="margin:0 1rem"><div class="alert alert-{% if message.tags == 'error' %}error{% else %}success{% endif %}">{{ message }}</div></div>
+{% endfor %}
+
+{% if not solicitudes %}
+<div class="mobile-card-tech" style="text-align:center;color:#94a3b8">
+  <div style="font-size:3rem;margin-bottom:.5rem">📭</div>
+  <p>No tiene solicitudes pendientes.</p>
+  <a href="{% url 'tecnico_nueva_solicitud' %}" class="btn btn-primary" style="margin-top:1rem">Crear primera solicitud</a>
+</div>
+{% endif %}
+
+{% for sol in solicitudes %}
+<div class="mobile-card-tech">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem">
+    <div>
+      <span style="font-weight:700;color:var(--primary)">{{ sol.fecha_solicitud|date:"d/m/Y" }}</span>
+      <code style="font-size:.75rem;color:#94a3b8;margin-left:.5rem">{{ sol.id_corto }}</code>
+    </div>
+    <span class="badge badge-{{ sol.estado }}">{{ sol.get_estado_display }}</span>
+  </div>
+  {% for item in sol.items.all %}
+  <div style="display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid #f1f5f9;font-size:.85rem">
+    <span>{{ item.material.descripcion }}</span>
+    <span style="font-weight:600;white-space:nowrap;margin-left:.5rem">× {{ item.cantidad_solicitada }}</span>
+  </div>
+  {% endfor %}
+  {% if sol.puede_editar %}
+  <div style="margin-top:.8rem">
+    <a href="{% url 'tecnico_editar_solicitud' sol.pk %}" class="btn btn-sm">✏ Editar</a>
+  </div>
+  {% endif %}
+</div>
+{% endfor %}
+</body>
+</html>

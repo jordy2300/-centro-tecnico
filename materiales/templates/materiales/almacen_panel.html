@@ -1,0 +1,68 @@
+{% extends "core/base.html" %}
+{% block title %}Panel Almacén{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>🏪 Panel de Almacén</h1>
+  {% if request.user.is_superuser %}
+  <a href="{% url 'materiales_panel' %}" class="btn">← Centro Técnico</a>
+  {% endif %}
+</div>
+
+{% if not solicitudes %}
+<div class="card"><p style="text-align:center;color:#94a3b8;padding:2rem">No hay solicitudes aprobadas pendientes de entrega.</p></div>
+{% endif %}
+
+{% for sol in solicitudes %}
+<div class="card" style="margin-bottom:1rem">
+  <div class="card-header">
+    <div>
+      <strong>{{ sol.cuadrilla.movil }}</strong> — {{ sol.cuadrilla.nombre }}
+      <span class="badge badge-{{ sol.estado }}" style="margin-left:.5rem">{{ sol.get_estado_display }}</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:.5rem">
+      <span style="color:#94a3b8;font-size:.8rem">{{ sol.fecha_solicitud|date:"d/m/Y" }}</span>
+      <a href="{% url 'almacen_entregar' sol.pk %}" class="btn btn-orange btn-sm">📦 Registrar Entrega</a>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Material</th><th>Cant. Solicitada</th><th>Cant. Entregada</th><th>Estado</th></tr></thead>
+      <tbody>
+      {% for item in sol.items.all %}
+      <tr>
+        <td>{{ item.material.descripcion }}</td>
+        <td>{{ item.cantidad_solicitada }} {{ item.material.unidad }}</td>
+        <td>{{ item.cantidad_entregada }}</td>
+        <td><span class="badge badge-{% if item.estado_entrega == 'entregado' %}aprobada{% elif item.estado_entrega == 'no_disponible' %}rechazado{% else %}pendiente{% endif %}">{{ item.get_estado_entrega_display }}</span></td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endfor %}
+
+{% if historial %}
+<div class="card" style="margin-top:2rem">
+  <div class="card-header">
+    <h2>📜 Historial de Entregas</h2>
+  </div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Fecha</th><th>Móvil</th><th>Técnico</th><th>Items</th><th>Estado</th></tr></thead>
+      <tbody>
+      {% for sol in historial %}
+      <tr>
+        <td>{{ sol.fecha_solicitud|date:"d/m/Y" }}</td>
+        <td><strong>{{ sol.cuadrilla.movil }}</strong></td>
+        <td>{{ sol.cuadrilla.nombre }}</td>
+        <td>{{ sol.total_items }}</td>
+        <td><span class="badge badge-{{ sol.estado }}">{{ sol.get_estado_display }}</span></td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

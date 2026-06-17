@@ -1,0 +1,37 @@
+{% extends "core/base.html" %}
+{% block title %}Registrar Entrega{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>📦 Registrar Entrega — {{ sol.cuadrilla.movil }}</h1>
+  <a href="{% url 'almacen_panel' %}" class="btn">← Volver</a>
+</div>
+<div class="card">
+  <form method="post">
+    {% csrf_token %}
+    {% for item in sol.items.all %}
+    <div class="entrega-row">
+      <div class="entrega-material">{{ item.material.descripcion }}</div>
+      <div class="entrega-qty">Solicitado: <strong>{{ item.cantidad_solicitada }} {{ item.material.unidad }}</strong></div>
+      <div class="entrega-actions">
+        <div class="form-group" style="margin:0;flex:1;min-width:120px">
+          <label>Cantidad entregada</label>
+          <input type="number" name="cantidad_{{ item.pk }}" value="{{ item.cantidad_entregada }}" min="0" step="0.01" class="form-control">
+        </div>
+        <div class="form-group" style="margin:0;flex:1;min-width:160px">
+          <label>Estado</label>
+          <select name="estado_{{ item.pk }}" class="form-control">
+            <option value="pendiente" {% if item.estado_entrega == 'pendiente' %}selected{% endif %}>Pendiente</option>
+            <option value="entregado" {% if item.estado_entrega == 'entregado' %}selected{% endif %}>Entregado</option>
+            <option value="parcial" {% if item.estado_entrega == 'parcial' %}selected{% endif %}>Entregado Parcialmente</option>
+            <option value="no_disponible" {% if item.estado_entrega == 'no_disponible' %}selected{% endif %}>No Disponible</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+    <div style="margin-top:1rem;text-align:right">
+      <button type="submit" class="btn btn-green">✔ Confirmar Entrega</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,53 @@
+{% extends "core/base.html" %}
+{% block title %}Detalle Solicitud{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>📋 Solicitud <code>{{ sol.id_corto }}</code></h1>
+  <div class="actions">
+    {% if sol.estado == 'pendiente' %}
+    <form method="post" action="{% url 'aprobar_solicitud' sol.pk %}">{% csrf_token %}<button class="btn btn-green">✔ Aprobar Solicitud</button></form>
+    {% endif %}
+    <a href="{% url 'lista_solicitudes' %}" class="btn">← Volver</a>
+  </div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+  <div class="card">
+    <h2 style="margin-bottom:.8rem;color:var(--primary);font-size:.95rem">Información</h2>
+    <table style="width:100%;font-size:.9rem">
+      <tr><td style="color:#666;padding:.3rem 0">Móvil</td><td><strong>{{ sol.cuadrilla.movil }}</strong></td></tr>
+      <tr><td style="color:#666;padding:.3rem 0">Técnico</td><td>{{ sol.cuadrilla.nombre }}</td></tr>
+      <tr><td style="color:#666;padding:.3rem 0">Fecha</td><td>{{ sol.fecha_solicitud|date:"d/m/Y" }}</td></tr>
+      <tr><td style="color:#666;padding:.3rem 0">Estado</td><td><span class="badge badge-{{ sol.estado }}">{{ sol.get_estado_display }}</span></td></tr>
+      {% if sol.aprobado_por %}<tr><td style="color:#666;padding:.3rem 0">Aprobado por</td><td>{{ sol.aprobado_por.username }}</td></tr>{% endif %}
+    </table>
+  </div>
+  <div class="card">
+    <h2 style="margin-bottom:.8rem;color:var(--primary);font-size:.95rem">Observaciones</h2>
+    <form method="post" action="{% url 'editar_observacion' sol.pk %}">
+      {% csrf_token %}
+      <textarea name="observaciones" class="form-control" rows="4" placeholder="Agregar observaciones…">{{ sol.observaciones }}</textarea>
+      <button type="submit" class="btn btn-primary btn-sm" style="margin-top:.5rem">Guardar</button>
+    </form>
+  </div>
+</div>
+<div class="card">
+  <h2 style="margin-bottom:1rem;color:var(--primary);font-size:.95rem">Materiales Solicitados</h2>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Código</th><th>Descripción</th><th>Cant. Solicitada</th><th>Cant. Entregada</th><th>A Cobro</th><th>Estado Entrega</th></tr></thead>
+      <tbody>
+      {% for item in sol.items.all %}
+      <tr>
+        <td><code>{{ item.material.codigo }}</code></td>
+        <td>{{ item.material.descripcion }}</td>
+        <td>{{ item.cantidad_solicitada }} {{ item.material.unidad }}</td>
+        <td>{{ item.cantidad_entregada }}</td>
+        <td>{{ item.get_acobro_display }}</td>
+        <td><span class="badge badge-{% if item.estado_entrega == 'entregado' %}aprobada{% elif item.estado_entrega == 'no_disponible' %}rechazado{% else %}pendiente{% endif %}">{{ item.get_estado_entrega_display }}</span></td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

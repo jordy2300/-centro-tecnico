@@ -1,0 +1,88 @@
+{% extends "asistencia/base.html" %}
+{% block title %}Técnicos{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Técnicos Autorizados</h1>
+  <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+    <button onclick="document.getElementById('modal-agregar').style.display='flex'" class="btn btn-primary">+ Agregar Técnico</button>
+    <form method="post" action="{% url 'importar_excel' %}" style="display:inline">
+      {% csrf_token %}
+      <button type="submit" class="btn">📥 Importar Excel</button>
+    </form>
+  </div>
+</div>
+
+<table class="table">
+  <thead>
+    <tr><th>Cédula</th><th>Nombre</th><th>Celular</th><th>Estado</th><th>Acciones</th></tr>
+  </thead>
+  <tbody>
+  {% for t in tecnicos %}
+  <tr>
+    <td>{{ t.cedula }}</td>
+    <td>{{ t.nombre }}</td>
+    <td>{{ t.celular }}</td>
+    <td><span class="badge {% if t.activo %}badge-validado{% else %}badge-rechazado{% endif %}">{% if t.activo %}Activo{% else %}Inactivo{% endif %}</span></td>
+    <td style="display:flex;gap:.4rem">
+      <button onclick="abrirEditar('{{ t.pk }}','{{ t.cedula }}','{{ t.nombre }}','{{ t.celular }}','{{ t.activo }}')" class="btn btn-sm">✏ Editar</button>
+      <form method="post" action="{% url 'eliminar_tecnico' t.pk %}" onsubmit="return confirm('¿Eliminar a {{ t.nombre }}?')">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-sm" style="background:#fee2e2;color:#991b1b;border-color:#fca5a5">🗑 Eliminar</button>
+      </form>
+    </td>
+  </tr>
+  {% empty %}
+  <tr><td colspan="5" class="empty-msg">No hay técnicos. Agregue uno o importe desde Excel.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<!-- Modal Agregar -->
+<div id="modal-agregar" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:12px;padding:2rem;width:100%;max-width:420px;margin:1rem">
+    <h2 style="margin-bottom:1.2rem;color:#1F4E79">Agregar Técnico</h2>
+    <form method="post" action="{% url 'agregar_tecnico' %}">
+      {% csrf_token %}
+      <div class="form-group"><label>Cédula</label><input type="text" name="cedula" class="form-control" required></div>
+      <div class="form-group"><label>Nombre completo</label><input type="text" name="nombre" class="form-control" required></div>
+      <div class="form-group"><label>Celular</label><input type="text" name="celular" class="form-control" required></div>
+      <div style="display:flex;gap:.5rem;margin-top:1rem">
+        <button type="submit" class="btn btn-primary">Guardar</button>
+        <button type="button" onclick="document.getElementById('modal-agregar').style.display='none'" class="btn">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Editar -->
+<div id="modal-editar" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:12px;padding:2rem;width:100%;max-width:420px;margin:1rem">
+    <h2 style="margin-bottom:1.2rem;color:#1F4E79">Editar Técnico</h2>
+    <form method="post" id="form-editar" action="">
+      {% csrf_token %}
+      <div class="form-group"><label>Cédula</label><input type="text" name="cedula" id="edit-cedula" class="form-control" required></div>
+      <div class="form-group"><label>Nombre completo</label><input type="text" name="nombre" id="edit-nombre" class="form-control" required></div>
+      <div class="form-group"><label>Celular</label><input type="text" name="celular" id="edit-celular" class="form-control" required></div>
+      <div class="form-group" style="display:flex;align-items:center;gap:.5rem">
+        <input type="checkbox" name="activo" id="edit-activo" style="width:16px;height:16px">
+        <label for="edit-activo" style="margin:0">Activo</label>
+      </div>
+      <div style="display:flex;gap:.5rem;margin-top:1rem">
+        <button type="submit" class="btn btn-primary">Actualizar</button>
+        <button type="button" onclick="document.getElementById('modal-editar').style.display='none'" class="btn">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function abrirEditar(pk, cedula, nombre, celular, activo) {
+  document.getElementById('form-editar').action = `/asistencia/tecnicos/${pk}/editar/`;
+  document.getElementById('edit-cedula').value = cedula;
+  document.getElementById('edit-nombre').value = nombre;
+  document.getElementById('edit-celular').value = celular;
+  document.getElementById('edit-activo').checked = activo === 'True';
+  document.getElementById('modal-editar').style.display = 'flex';
+}
+</script>
+{% endblock %}
