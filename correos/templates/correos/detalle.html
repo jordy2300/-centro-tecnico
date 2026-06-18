@@ -5,7 +5,6 @@
   <h1>📧 {{ correo.cliente }}</h1>
   <div class="actions">
     {% if request.user.is_superuser %}
-    <a href="{% url 'editar_correo' correo.pk %}" class="btn btn-primary">✏ Editar</a>
     {% endif %}
     <a href="{% url 'lista_correos' %}" class="btn">← Volver</a>
   </div>

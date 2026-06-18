@@ -4,6 +4,11 @@ from datetime import timedelta, date
 
 
 def calcular_dias_habiles(fecha_inicio, dias=8):
+    from datetime import date, timedelta
+    # Convertir string a date si es necesario
+    if isinstance(fecha_inicio, str):
+        from datetime import datetime
+        fecha_inicio = datetime.strptime(fecha_inicio, '%Y-%m-%d').date()
     fecha = fecha_inicio
     habiles = 0
     while habiles < dias:
@@ -44,10 +49,7 @@ class Correo(models.Model):
     asunto = models.CharField(max_length=500)
     fecha_recibido = models.DateField()
     fecha_limite = models.DateField(blank=True, null=True)
-    responsable = models.ForeignKey(
-        User, on_delete=models.SET_NULL, null=True, blank=True,
-        related_name='correos_asignados'
-    )
+    responsable = models.CharField(max_length=100, blank=True, default='')
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='pendiente')
     revision = models.CharField(max_length=20, choices=REVISION_CHOICES, default='pendiente')
     ejecutado = models.BooleanField(default=False)

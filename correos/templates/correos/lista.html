@@ -7,14 +7,12 @@
 .plazo-critico { color: #dc2626; font-weight: 700; }
 .plazo-proximo { color: #d97706; font-weight: 700; }
 .plazo-ok { color: #16a34a; }
-.toggle-btn { width: 18px; height: 18px; cursor: pointer; accent-color: #1a3a5c; }
 .revision-select { font-size: .78rem; padding: .2rem .4rem; border-radius: 4px; border: 1px solid #e2e8f0; background: #f8fafc; }
 .search-box { position: relative; flex: 1; min-width: 200px; }
 .search-box input { width: 100%; padding-left: 2rem; }
 .search-box::before { content: '🔍'; position: absolute; left: .5rem; top: 50%; transform: translateY(-50%); font-size: .85rem; }
 .btn-tab { padding: .4rem .9rem; border-radius: 20px; border: 1px solid #e2e8f0; background: #fff; cursor: pointer; font-size: .82rem; text-decoration: none; color: #475569; }
 .btn-tab.active { background: #1a3a5c; color: #fff; border-color: #1a3a5c; }
-.responsable-avatar { width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: .75rem; font-weight: 700; color: #fff; background: #2563a8; }
 </style>
 {% endblock %}
 {% block content %}
@@ -32,9 +30,9 @@
 <!-- Stats -->
 <div class="stats-grid" style="grid-template-columns:repeat(4,1fr)">
   <div class="stat-card blue"><div class="stat-num">{{ stats.total }}</div><div class="stat-label">TOTAL</div></div>
-  <div class="stat-card orange"><div class="stat-num">{{ stats.pendientes }}</div><div class="stat-label">⏰ PENDIENTES</div></div>
-  <div class="stat-card green"><div class="stat-num">{{ stats.ejecutados }}</div><div class="stat-label">✅ EJECUTADOS</div></div>
-  <div class="stat-card blue"><div class="stat-num">{{ stats.respondidos }}</div><div class="stat-label">💬 RESPONDIDOS</div></div>
+  <div class="stat-card orange"><div class="stat-num">{{ stats.pendientes }}</div><div class="stat-label">PENDIENTES</div></div>
+  <div class="stat-card green"><div class="stat-num">{{ stats.ejecutados }}</div><div class="stat-label">EJECUTADOS</div></div>
+  <div class="stat-card blue"><div class="stat-num">{{ stats.respondidos }}</div><div class="stat-label">RESPONDIDOS</div></div>
 </div>
 
 <!-- Filtros -->
@@ -42,13 +40,6 @@
   <form method="get" style="display:contents" id="filter-form">
     <div class="search-box">
       <input type="text" name="q" value="{{ filtros.q }}" class="form-control" placeholder="Buscar cliente o asunto…" oninput="debounceFilter()">
-    </div>
-    <div class="form-group" style="margin:0;min-width:130px">
-      <label>Responsable</label>
-      <select name="responsable" class="form-control" onchange="this.form.submit()">
-        <option value="">Todos</option>
-        {% for u in usuarios %}<option value="{{ u.pk }}" {% if filtros.responsable == u.pk|stringformat:'s' %}selected{% endif %}>{{ u.username }}</option>{% endfor %}
-      </select>
     </div>
     <div class="form-group" style="margin:0;min-width:130px">
       <label>Estado</label>
@@ -95,13 +86,17 @@
       {% for item in correos %}
       {% with c=item.obj alerta=item.alerta dias=item.dias %}
       <tr class="correo-row {{ alerta }}" id="row-{{ c.pk }}">
+
+        <!-- Cliente -->
         <td>
           <div style="font-weight:700;font-size:.9rem">{{ c.cliente }}</div>
           <div style="color:#64748b;font-size:.82rem">{{ c.asunto|truncatechars:70 }}</div>
-          <div style="color:#94a3b8;font-size:.75rem">📅 Recibido: {{ c.fecha_recibido|date:"Y-m-d" }}</div>
+          <div style="color:#94a3b8;font-size:.75rem">📅 Recibido: {{ c.fecha_recibido|date:"d/m/Y" }}</div>
         </td>
+
+        <!-- Plazo -->
         <td>
-          {% if c.estado == 'respondido' or c.estado == 'gestionado' %}
+          {% if c.ejecutado or c.respondido %}
             <span style="color:#16a34a;font-weight:600">✅ Finalizado</span>
           {% elif c.esta_vencido %}
             <span class="badge" style="background:#fee2e2;color:#991b1b;padding:.3rem .6rem">VENCIDO ({{ dias }}d)</span>
@@ -114,16 +109,15 @@
           <div style="font-size:.73rem;color:#94a3b8">Límite: {{ c.fecha_limite|date:"d/m/Y" }}</div>
           {% endif %}
         </td>
+
+        <!-- Responsable -->
         <td>
-          {% if c.responsable %}
-          <div style="display:flex;align-items:center;gap:.5rem">
-            <div class="responsable-avatar">{{ c.responsable.username|first|upper }}{{ c.responsable.username|slice:"1:2"|upper }}</div>
-            <span style="font-size:.85rem">{{ c.responsable.username }}</span>
-          </div>
-          {% else %}
-          <span style="color:#94a3b8;font-size:.82rem">Sin asignar</span>
-          {% endif %}
+          <input type="text" value="{{ c.responsable }}" placeholder="Sin asignar"
+            style="border:1px solid #e2e8f0;border-radius:6px;padding:.3rem .5rem;font-size:.83rem;width:100px;background:#f8fafc"
+            onblur="actualizarResponsable({{ c.pk }}, this.value)">
         </td>
+
+        <!-- Revisión -->
         <td>
           {% if request.user.is_superuser %}
           <select class="revision-select" onchange="cambiarRevision({{ c.pk }}, this.value)">
@@ -137,37 +131,38 @@
           </span>
           {% endif %}
         </td>
+
+        <!-- Estados -->
         <td>
           <div style="display:flex;flex-direction:column;gap:.4rem">
-            <label style="display:flex;align-items:center;gap:.4rem;font-size:.82rem;cursor:pointer">
-              <input type="checkbox" class="toggle-btn" {% if c.ejecutado %}checked{% endif %}
-                data-campo="ejecutado" onchange="cambiarEstado({{ c.pk }}, this.dataset.campo, this.checked)"
-                {% if not request.user.is_superuser and c.ejecutado %}disabled{% endif %}>
-              <span class="badge {% if c.ejecutado %}badge-aprobada{% else %}badge-pendiente{% endif %}" id="badge-ej-{{ c.pk }}">
-                Ejecutado
-              </span>
-            </label>
-            <label style="display:flex;align-items:center;gap:.4rem;font-size:.82rem;cursor:pointer">
-              <input type="checkbox" class="toggle-btn" {% if c.respondido %}checked{% endif %}
-                onchange="cambiarEstado({{ c.pk }}, 'respondido', this.checked)"
-                {% if not request.user.is_superuser and c.respondido %}disabled{% endif %}>
-              <span class="badge {% if c.respondido %}badge-aprobada{% else %}badge-pendiente{% endif %}" id="badge-res-{{ c.pk }}">
-                Respondido
-              </span>
-            </label>
+            <span class="badge" id="badge-ej-{{ c.pk }}"
+              style="background:{% if c.ejecutado %}#dcfce7{% else %}#fef9c3{% endif %};color:{% if c.ejecutado %}#15803d{% else %}#854d0e{% endif %}">
+              {% if c.ejecutado %}✅ Ejecutado{% else %}Pendiente{% endif %}
+            </span>
+            <span class="badge" id="badge-res-{{ c.pk }}"
+              style="background:{% if c.respondido %}#dcfce7{% else %}#fef9c3{% endif %};color:{% if c.respondido %}#15803d{% else %}#854d0e{% endif %}">
+              {% if c.respondido %}✅ Respondido{% else %}Sin responder{% endif %}
+            </span>
           </div>
         </td>
+
+        <!-- Acción -->
         <td>
-          <div style="display:flex;gap:.3rem;flex-wrap:wrap">
+          <div style="display:flex;gap:.3rem;flex-wrap:wrap;align-items:center">
             <a href="{% url 'detalle_correo' c.pk %}" class="btn btn-sm">👁</a>
+            {% if not c.ejecutado %}
+            <button onclick="marcarEjecutado({{ c.pk }}, this)" class="btn btn-sm btn-green">✔ Ejecutado</button>
+            {% else %}
+            <span style="color:#16a34a;font-size:.8rem;font-weight:600">✅ Listo</span>
+            {% endif %}
             {% if request.user.is_superuser %}
-            <a href="{% url 'editar_correo' c.pk %}" class="btn btn-sm btn-primary">✏</a>
             <form method="post" action="{% url 'eliminar_correo' c.pk %}" onsubmit="return confirm('¿Eliminar este correo?')">
               {% csrf_token %}<button class="btn btn-sm btn-red">🗑</button>
             </form>
             {% endif %}
           </div>
         </td>
+
       </tr>
       {% endwith %}
       {% empty %}
@@ -181,26 +176,43 @@
 <script>
 const csrf = '{{ csrf_token }}';
 
-async function cambiarEstado(pk, campo, valor) {
-  const res = await fetch(`/correos/${pk}/estado/`, {
+async function marcarEjecutado(pk, btn) {
+  const res = await fetch(`/asistencia/correos/${pk}/estado/`, {
     method: 'POST',
     headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': csrf},
-    body: `campo=${campo}&valor=${valor}`
+    body: `campo=ejecutado&valor=true`
   });
   const data = await res.json();
   if (data.ok) {
-    const badge = document.getElementById(campo === 'ejecutado' ? `badge-ej-${pk}` : `badge-res-${pk}`);
+    btn.outerHTML = '<span style="color:#16a34a;font-size:.8rem;font-weight:600">✅ Listo</span>';
+    const badge = document.getElementById(`badge-ej-${pk}`);
     if (badge) {
-      badge.className = `badge ${valor ? 'badge-aprobada' : 'badge-pendiente'}`;
+      badge.style.background = '#dcfce7';
+      badge.style.color = '#15803d';
+      badge.textContent = '✅ Ejecutado';
+    }
+    const counter = document.querySelector('.stat-card.green .stat-num');
+    if (counter) counter.textContent = parseInt(counter.textContent) + 1;
+    const pendCounter = document.querySelector('.stat-card.orange .stat-num');
+    if (pendCounter && parseInt(pendCounter.textContent) > 0) {
+      pendCounter.textContent = parseInt(pendCounter.textContent) - 1;
     }
   }
 }
 
 async function cambiarRevision(pk, valor) {
-  await fetch(`/correos/${pk}/revision/`, {
+  await fetch(`/asistencia/correos/${pk}/revision/`, {
     method: 'POST',
     headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': csrf},
     body: `revision=${valor}`
+  });
+}
+
+async function actualizarResponsable(pk, valor) {
+  await fetch(`/asistencia/correos/${pk}/editar/`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': csrf},
+    body: `responsable=${encodeURIComponent(valor)}&_solo_responsable=1`
   });
 }
 

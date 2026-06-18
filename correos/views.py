@@ -20,7 +20,7 @@ def _registrar_historial(correo, usuario, campo, anterior, nuevo):
 
 @login_required
 def lista_correos(request):
-    qs = Correo.objects.select_related('responsable')
+    qs = Correo.objects.select_related('creado_por')
     
     # Filtros
     q = request.GET.get('q', '')
@@ -55,7 +55,7 @@ def lista_correos(request):
         'respondidos': todos.filter(respondido=True).count(),
     }
 
-    usuarios = User.objects.filter(is_active=True)
+    
     correos = list(qs)
     
     # Anotar alerta para ordenar: critico primero
@@ -77,7 +77,6 @@ def lista_correos(request):
     return render(request, 'correos/lista.html', {
         'correos': correos,
         'stats': stats,
-        'usuarios': usuarios,
         'estados': Correo.ESTADO_CHOICES,
         'filtros': {
             'q': q, 'estado': estado, 'responsable': responsable_id,
@@ -93,7 +92,7 @@ def nuevo_correo(request):
             cliente=request.POST.get('cliente', '').strip(),
             asunto=request.POST.get('asunto', '').strip(),
             fecha_recibido=request.POST.get('fecha_recibido'),
-            responsable_id=request.POST.get('responsable') or None,
+            responsable=request.POST.get('responsable', '').strip(),
             estado=request.POST.get('estado', 'pendiente'),
             observaciones=request.POST.get('observaciones', ''),
             creado_por=request.user,
@@ -115,28 +114,38 @@ def editar_correo(request, pk):
         return redirect('lista_correos')
     correo = get_object_or_404(Correo, pk=pk)
     if request.method == 'POST':
-        # Registrar historial de cambios
-        campos = {
-            'cliente': request.POST.get('cliente', '').strip(),
-            'asunto': request.POST.get('asunto', '').strip(),
-            'estado': request.POST.get('estado', correo.estado),
-            'responsable_id': request.POST.get('responsable') or None,
-            'observaciones': request.POST.get('observaciones', ''),
-        }
-        _registrar_historial(correo, request.user, 'estado', correo.estado, campos['estado'])
-        _registrar_historial(correo, request.user, 'responsable', correo.responsable_id, campos['responsable_id'])
+     if request.method == 'POST':
+        # Actualización rápida solo del responsable desde la tabla
+        if request.POST.get('_solo_responsable'):
+            correo.responsable = request.POST.get('responsable', '').strip()
+            correo.save()
+            return JsonResponse({'ok': True})
 
-        correo.cliente = campos['cliente']
-        correo.asunto = campos['asunto']
-        correo.estado = campos['estado']
-        correo.responsable_id = campos['responsable_id']
-        correo.observaciones = campos['observaciones']
-        correo.fecha_recibido = request.POST.get('fecha_recibido', correo.fecha_recibido)
-        # Recalcular fecha límite si cambió la fecha recibido
-        correo.fecha_limite = None
-        correo.save()
-        messages.success(request, 'Correo actualizado.')
-        return redirect('lista_correos')
+     campos = {
+        'cliente': request.POST.get('cliente', '').strip(),
+        'asunto': request.POST.get('asunto', '').strip(),
+        'estado': request.POST.get('estado', correo.estado),
+        'responsable': request.POST.get('responsable', '').strip(),
+        'observaciones': request.POST.get('observaciones', ''),
+    }
+    _registrar_historial(correo, request.user, 'estado', correo.estado, campos['estado'])
+    _registrar_historial(correo, request.user, 'responsable', correo.responsable, campos['responsable'])
+
+    correo.cliente = campos['cliente']
+    correo.asunto = campos['asunto']
+    correo.estado = campos['estado']
+    correo.responsable = campos['responsable']
+    correo.observaciones = campos['observaciones']
+    correo.fecha_recibido = request.POST.get('fecha_recibido', correo.fecha_recibido)
+    correo.fecha_limite = None
+    correo.save()
+    messages.success(request, 'Correo actualizado.')
+    return redirect('lista_correos')
+
+
+
+
+
     usuarios = User.objects.filter(is_active=True)
     return render(request, 'correos/form.html', {
         'correo': correo,
@@ -161,7 +170,6 @@ def eliminar_correo(request, pk):
 @login_required
 @require_POST
 def cambiar_estado_rapido(request, pk):
-    """Cambia ejecutado/respondido desde la tabla principal."""
     correo = get_object_or_404(Correo, pk=pk)
     campo = request.POST.get('campo')
     valor = request.POST.get('valor') == 'true'
@@ -170,14 +178,17 @@ def cambiar_estado_rapido(request, pk):
         correo.ejecutado = valor
         if valor:
             correo.estado = 'gestionado'
+        else:
+            correo.estado = 'pendiente'
     elif campo == 'respondido':
         correo.respondido = valor
         if valor:
             correo.estado = 'respondido'
+        else:
+            correo.estado = 'pendiente'
 
     correo.save()
-    _registrar_historial(correo, request.user, campo, not valor, valor)
-    return JsonResponse({'ok': True, 'estado': correo.estado})
+    return JsonResponse({'ok': True, 'ejecutado': correo.ejecutado, 'respondido': correo.respondido})
 
 
 @login_required
