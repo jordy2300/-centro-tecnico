@@ -6,23 +6,25 @@ from .models import Material, Cuadrilla, Solicitud, ItemSolicitud
 
 
 def importar_materiales(ruta):
-    import pandas as pd
-    df = pd.read_excel(ruta)
+    import openpyxl
+    wb = openpyxl.load_workbook(ruta)
+    ws = wb.active
     creados, actualizados = 0, 0
-    for _, row in df.iterrows():
-        codigo = str(row.get('Codigo', '') or '').strip()
-        descripcion = str(row.get('Descripcion', '') or '').strip()
-        unidad = str(row.get('Unidad', '') or '').strip()
-        if not codigo or not descripcion:
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        codigo = str(row[0]).strip() if row[0] else ''
+        descripcion = str(row[1]).strip() if row[1] else ''
+        unidad = str(row[2]).strip() if row[2] else ''
+        if not codigo or not descripcion or codigo == 'None':
             continue
         obj, created = Material.objects.update_or_create(
             codigo=codigo,
             defaults={'descripcion': descripcion, 'unidad': unidad, 'activo': True}
         )
-        if created: creados += 1
-        else: actualizados += 1
+        if created:
+            creados += 1
+        else:
+            actualizados += 1
     return {'creados': creados, 'actualizados': actualizados}
-
 
 def exportar_solicitudes_excel(solicitudes_qs):
     """Genera el Excel con el mismo formato de Plantilla_Almacen (Datos1 + Datos2)."""
