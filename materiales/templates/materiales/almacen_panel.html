@@ -5,6 +5,8 @@
   <h1>🏪 Panel de Almacén</h1>
   {% if request.user.is_superuser %}
   <a href="{% url 'materiales_panel' %}" class="btn">← Centro Técnico</a>
+
+  <a href="{% url 'gestion_materiales' %}" class="btn btn-primary">⚙ Gestionar Materiales</a>
   {% endif %}
 </div>
 

@@ -27,4 +27,10 @@ urlpatterns = [
     # API
     path('api/materiales/', views.api_buscar_material, name='api_buscar_material'),
     path('exportar/plantilla/', views.exportar_plantilla_cuadrilla, name='exportar_plantilla'),
+    path('materiales/gestion/', views.gestion_materiales, name='gestion_materiales'),
+    path('materiales/gestion/nuevo/', views.guardar_material, name='nuevo_material'),
+    path('materiales/gestion/<int:pk>/editar/', views.guardar_material, name='editar_material'),
+    path('materiales/gestion/<int:pk>/eliminar/', views.eliminar_material, name='eliminar_material'),
+    path('cuadrillas/<int:pk>/editar/', views.editar_cuadrilla, name='editar_cuadrilla'),
+    path('cuadrillas/<int:pk>/eliminar/', views.eliminar_cuadrilla, name='eliminar_cuadrilla'),
 ]

@@ -1,0 +1,88 @@
+{% extends "core/base.html" %}
+{% block title %}Gestión de Materiales{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>📦 Gestión de Materiales</h1>
+  <div class="actions">
+    <button onclick="document.getElementById('modal-nuevo').style.display='flex'" class="btn btn-primary">+ Nuevo Material</button>
+    <a href="{% url 'almacen_panel' %}" class="btn">← Almacén</a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="filter-bar" style="margin-bottom:1rem">
+    <input type="text" id="buscador" class="form-control" placeholder="Buscar material…" oninput="filtrarTabla(this.value)">
+  </div>
+  <div class="table-wrap">
+    <table class="table" id="tabla-materiales">
+      <thead><tr><th>Código</th><th>Descripción</th><th>Unidad</th><th>Acciones</th></tr></thead>
+      <tbody>
+      {% for m in materiales %}
+      <tr>
+        <td><code>{{ m.codigo }}</code></td>
+        <td>{{ m.descripcion }}</td>
+        <td>{{ m.unidad }}</td>
+        <td style="display:flex;gap:.3rem">
+          <button onclick="abrirEditar('{{ m.pk }}','{{ m.codigo }}','{{ m.descripcion|escapejs }}','{{ m.unidad }}')" class="btn btn-sm btn-primary">✏ Editar</button>
+          <form method="post" action="{% url 'eliminar_material' m.pk %}" onsubmit="return confirm('¿Eliminar este material?')">
+            {% csrf_token %}<button class="btn btn-sm btn-red">🗑</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal Nuevo -->
+<div id="modal-nuevo" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:12px;padding:2rem;width:100%;max-width:480px;margin:1rem">
+    <h2 style="margin-bottom:1.2rem;color:#1a3a5c">Nuevo Material</h2>
+    <form method="post" action="{% url 'nuevo_material' %}">
+      {% csrf_token %}
+      <div class="form-group"><label>Código</label><input type="text" name="codigo" class="form-control" required></div>
+      <div class="form-group"><label>Descripción</label><input type="text" name="descripcion" class="form-control" required></div>
+      <div class="form-group"><label>Unidad</label><input type="text" name="unidad" class="form-control" placeholder="UND, ML, KG…"></div>
+      <div style="display:flex;gap:.5rem;margin-top:1rem">
+        <button type="submit" class="btn btn-primary">Guardar</button>
+        <button type="button" onclick="document.getElementById('modal-nuevo').style.display='none'" class="btn">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Editar -->
+<div id="modal-editar" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:12px;padding:2rem;width:100%;max-width:480px;margin:1rem">
+    <h2 style="margin-bottom:1.2rem;color:#1a3a5c">Editar Material</h2>
+    <form method="post" id="form-editar" action="">
+      {% csrf_token %}
+      <div class="form-group"><label>Código</label><input type="text" name="codigo" id="edit-codigo" class="form-control" required></div>
+      <div class="form-group"><label>Descripción</label><input type="text" name="descripcion" id="edit-descripcion" class="form-control" required></div>
+      <div class="form-group"><label>Unidad</label><input type="text" name="unidad" id="edit-unidad" class="form-control"></div>
+      <div style="display:flex;gap:.5rem;margin-top:1rem">
+        <button type="submit" class="btn btn-primary">Actualizar</button>
+        <button type="button" onclick="document.getElementById('modal-editar').style.display='none'" class="btn">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function abrirEditar(pk, codigo, descripcion, unidad) {
+  document.getElementById('form-editar').action = `/materiales/materiales/gestion/${pk}/editar/`;
+  document.getElementById('edit-codigo').value = codigo;
+  document.getElementById('edit-descripcion').value = descripcion;
+  document.getElementById('edit-unidad').value = unidad;
+  document.getElementById('modal-editar').style.display = 'flex';
+}
+
+function filtrarTabla(q) {
+  const rows = document.querySelectorAll('#tabla-materiales tbody tr');
+  rows.forEach(row => {
+    row.style.display = row.textContent.toLowerCase().includes(q.toLowerCase()) ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

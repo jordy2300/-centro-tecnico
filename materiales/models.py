@@ -19,9 +19,10 @@ class Material(models.Model):
 
 
 class Cuadrilla(models.Model):
-    codigo = models.CharField(max_length=10, unique=True)  # 0001, 0002...
+    codigo = models.CharField(max_length=10, unique=True)
     nombre = models.CharField(max_length=100)
     movil = models.CharField(max_length=20)
+    supervisor = models.CharField(max_length=100, blank=True, default='')
     activo = models.BooleanField(default=True)
 
     class Meta:
@@ -37,6 +38,7 @@ class Solicitud(models.Model):
     ESTADO_CHOICES = [
         ('pendiente', 'Pendiente de Revisión'),
         ('aprobada', 'Aprobada'),
+        ('alistado', 'Alistado — Listo para recoger'),
         ('en_entrega', 'Pendiente de Entrega'),
         ('entregada', 'Entregada Totalmente'),
         ('parcial', 'Entregada Parcialmente'),
@@ -78,9 +80,9 @@ class ItemSolicitud(models.Model):
     ]
     ENTREGA_CHOICES = [
         ('pendiente', 'Pendiente'),
+        ('alistado', 'Alistado'),
         ('entregado', 'Entregado'),
-        ('parcial', 'Entregado Parcialmente'),
-        ('no_disponible', 'No Disponible'),
+        ('cerrado', 'Cerrado'),
     ]
 
     solicitud = models.ForeignKey(Solicitud, on_delete=models.CASCADE, related_name='items')

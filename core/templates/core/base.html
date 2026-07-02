@@ -11,6 +11,8 @@
 <body>
 <nav class="navbar">
   <div class="nav-brand">⚡ <span>Centro</span>Técnico</div>
+
+  {% if request.user.username != 'almacen' %}
   <div class="nav-modulos">
     <button onclick="toggleMenu()">📦 Módulos ▾</button>
     <div class="dropdown-menu" id="modMenu">
@@ -20,6 +22,9 @@
       <a href="{% url 'lista_correos' %}"><span class="mod-icon">📧</span> Correos</a>
     </div>
   </div>
+  {% endif %}
+
+  
   <div class="nav-right">
     <span class="nav-user">👤 {{ request.user.username }}</span>
     <a href="{% url 'logout' %}" class="nav-logout">Salir</a>

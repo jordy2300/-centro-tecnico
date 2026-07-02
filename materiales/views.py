@@ -137,11 +137,14 @@ def almacen_entregar(request, pk):
             item.save()
 
         # Determinar estado de solicitud
+        
         items = sol.items.all()
         if all(i.estado_entrega == 'entregado' for i in items):
             sol.estado = 'entregada'
-        elif all(i.estado_entrega in ['no_disponible'] for i in items):
+        elif all(i.estado_entrega == 'cerrado' for i in items):
             sol.estado = 'cerrada'
+        elif any(i.estado_entrega == 'alistado' for i in items):
+            sol.estado = 'alistado'
         else:
             sol.estado = 'parcial'
         sol.save()
@@ -310,8 +313,17 @@ def crear_cuadrilla(request):
     codigo = request.POST.get('codigo', '').strip()
     nombre = request.POST.get('nombre', '').strip()
     movil = request.POST.get('movil', '').strip()
+    supervisor = request.POST.get('Supervisor', '').strip()
     if codigo and nombre and movil:
-        Cuadrilla.objects.update_or_create(codigo=codigo, defaults={'nombre': nombre, 'movil': movil, 'activo': True})
+        Cuadrilla.objects.update_or_create(
+            codigo=codigo,
+            defaults={
+                'nombre': nombre,
+                'movil': movil,
+                'supervisor': supervisor,
+                'activo': True
+            }
+        )
         messages.success(request, f'Cuadrilla {movil} guardada.')
     else:
         messages.error(request, 'Complete todos los campos.')
@@ -384,3 +396,72 @@ def exportar_plantilla_cuadrilla(request):
     resp = HttpResponse(out.read(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     resp['Content-Disposition'] = f'attachment; filename="{nombre_archivo}"'
     return resp
+
+def es_almacen(user):
+    return user.username == 'almacen' or user.is_superuser
+
+@login_required
+def gestion_materiales(request):
+    if not es_almacen(request.user):
+        messages.error(request, 'Sin acceso.')
+        return redirect('materiales_panel')
+    materiales = Material.objects.all().order_by('descripcion')
+    return render(request, 'materiales/gestion_materiales.html', {'materiales': materiales})
+
+
+@login_required
+@require_POST
+def guardar_material(request, pk=None):
+    if not es_almacen(request.user):
+        return JsonResponse({'ok': False})
+    codigo = request.POST.get('codigo', '').strip()
+    descripcion = request.POST.get('descripcion', '').strip()
+    unidad = request.POST.get('unidad', '').strip()
+    if not codigo or not descripcion:
+        messages.error(request, 'Código y descripción son obligatorios.')
+        return redirect('gestion_materiales')
+    if pk:
+        mat = get_object_or_404(Material, pk=pk)
+        mat.codigo = codigo
+        mat.descripcion = descripcion
+        mat.unidad = unidad
+        mat.save()
+        messages.success(request, 'Material actualizado.')
+    else:
+        Material.objects.create(codigo=codigo, descripcion=descripcion, unidad=unidad, activo=True)
+        messages.success(request, 'Material agregado.')
+    return redirect('gestion_materiales')
+
+
+@login_required
+@require_POST
+def eliminar_material(request, pk):
+    if not es_almacen(request.user):
+        return JsonResponse({'ok': False})
+    mat = get_object_or_404(Material, pk=pk)
+    mat.delete()
+    messages.success(request, 'Material eliminado.')
+    return redirect('gestion_materiales')
+
+@login_required
+@require_POST
+def editar_cuadrilla(request, pk):
+    cuadrilla = get_object_or_404(Cuadrilla, pk=pk)
+    cuadrilla.codigo = request.POST.get('codigo', '').strip()
+    cuadrilla.nombre = request.POST.get('nombre', '').strip()
+    cuadrilla.movil = request.POST.get('movil', '').strip()
+    cuadrilla.supervisor = request.POST.get('Supervisor', '').strip()
+    cuadrilla.activo = request.POST.get('activo') == 'on'
+    cuadrilla.save()
+    messages.success(request, f'Cuadrilla {cuadrilla.movil} actualizada.')
+    return redirect('gestion_cuadrillas')
+
+
+@login_required
+@require_POST
+def eliminar_cuadrilla(request, pk):
+    cuadrilla = get_object_or_404(Cuadrilla, pk=pk)
+    movil = cuadrilla.movil
+    cuadrilla.delete()
+    messages.success(request, f'Cuadrilla {movil} eliminada.')
+    return redirect('gestion_cuadrillas')

@@ -5,32 +5,55 @@
   <h1>📦 Registrar Entrega — {{ sol.cuadrilla.movil }}</h1>
   <a href="{% url 'almacen_panel' %}" class="btn">← Volver</a>
 </div>
+
+<div class="card" style="margin-bottom:1rem;background:#f0fdf4;border:1px solid #86efac">
+  <div style="font-size:.9rem;color:#15803d">
+    <strong>📋 Cuadrilla:</strong> {{ sol.cuadrilla.movil }} — {{ sol.cuadrilla.nombre }} &nbsp;|&nbsp;
+    <strong>📅 Fecha:</strong> {{ sol.fecha_solicitud|date:"d/m/Y" }} &nbsp;|&nbsp;
+    <strong>👤 Supervisor:</strong> {{ sol.cuadrilla.supervisor|default:"—" }}
+  </div>
+</div>
+
 <div class="card">
   <form method="post">
     {% csrf_token %}
     {% for item in sol.items.all %}
-    <div class="entrega-row">
-      <div class="entrega-material">{{ item.material.descripcion }}</div>
-      <div class="entrega-qty">Solicitado: <strong>{{ item.cantidad_solicitada }} {{ item.material.unidad }}</strong></div>
-      <div class="entrega-actions">
-        <div class="form-group" style="margin:0;flex:1;min-width:120px">
-          <label>Cantidad entregada</label>
-          <input type="number" name="cantidad_{{ item.pk }}" value="{{ item.cantidad_entregada }}" min="0" step="0.01" class="form-control">
+    <div class="entrega-row" style="border:1px solid #e2e8f0;border-radius:8px;padding:1rem;margin-bottom:.8rem">
+      <div class="entrega-material" style="font-weight:700;font-size:.95rem;margin-bottom:.3rem">
+        {{ item.material.descripcion }}
+      </div>
+      <div class="entrega-qty" style="color:#64748b;font-size:.85rem;margin-bottom:.8rem">
+        Solicitado: <strong>{{ item.cantidad_solicitada }} {{ item.material.unidad }}</strong>
+        &nbsp;|&nbsp; Código: <code>{{ item.material.codigo }}</code>
+      </div>
+      <div style="display:flex;gap:1rem;flex-wrap:wrap">
+        <div class="form-group" style="margin:0;flex:1;min-width:140px">
+          <label style="font-size:.82rem">Cantidad entregada</label>
+          <input type="number" name="cantidad_{{ item.pk }}"
+            value="{{ item.cantidad_entregada }}"
+            min="0" step="0.01" class="form-control">
         </div>
-        <div class="form-group" style="margin:0;flex:1;min-width:160px">
-          <label>Estado</label>
+        <div class="form-group" style="margin:0;flex:1;min-width:180px">
+          <label style="font-size:.82rem">Estado</label>
           <select name="estado_{{ item.pk }}" class="form-control">
-            <option value="pendiente" {% if item.estado_entrega == 'pendiente' %}selected{% endif %}>Pendiente</option>
-            <option value="entregado" {% if item.estado_entrega == 'entregado' %}selected{% endif %}>Entregado</option>
-            <option value="parcial" {% if item.estado_entrega == 'parcial' %}selected{% endif %}>Entregado Parcialmente</option>
-            <option value="no_disponible" {% if item.estado_entrega == 'no_disponible' %}selected{% endif %}>No Disponible</option>
+            <option value="alistado" {% if item.estado_entrega == 'alistado' %}selected{% endif %}>
+              📦 Alistado — Listo para recoger
+            </option>
+            <option value="entregado" {% if item.estado_entrega == 'entregado' %}selected{% endif %}>
+              ✅ Entregado
+            </option>
+            <option value="cerrado" {% if item.estado_entrega == 'cerrado' %}selected{% endif %}>
+              🔒 Cerrado
+            </option>
           </select>
         </div>
       </div>
     </div>
     {% endfor %}
-    <div style="margin-top:1rem;text-align:right">
-      <button type="submit" class="btn btn-green">✔ Confirmar Entrega</button>
+    <div style="margin-top:1.2rem;text-align:right">
+      <button type="submit" class="btn btn-green" style="padding:.7rem 1.5rem;font-size:1rem">
+        ✔ Confirmar
+      </button>
     </div>
   </form>
 </div>
