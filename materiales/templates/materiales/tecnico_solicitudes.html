@@ -49,9 +49,23 @@
     <span style="font-weight:600;white-space:nowrap;margin-left:.5rem">× {{ item.cantidad_solicitada }}</span>
   </div>
   {% endfor %}
+
+
+
+
+  
   {% if sol.puede_editar %}
   <div style="margin-top:.8rem">
     <a href="{% url 'tecnico_editar_solicitud' sol.pk %}" class="btn btn-sm">✏ Editar</a>
+  </div>
+  {% endif %}
+  {% if sol.estado == 'alistado' %}
+  <div style="margin-top:.8rem;background:#dcfce7;border-radius:8px;padding:.7rem;text-align:center">
+    <div style="color:#15803d;font-weight:700;margin-bottom:.5rem">📦 ¡Su pedido está listo para recoger!</div>
+    <a href="{% url 'tecnico_confirmar_recepcion' sol.pk %}"
+      style="display:block;background:#16a34a;color:#fff;padding:.6rem;border-radius:6px;text-decoration:none;font-weight:600">
+      ✅ Confirmar Recepción
+    </a>
   </div>
   {% endif %}
 </div>

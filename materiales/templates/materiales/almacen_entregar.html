@@ -1,60 +1,108 @@
 {% extends "core/base.html" %}
-{% block title %}Registrar Entrega{% endblock %}
+{% block title %}Panel Almacén{% endblock %}
 {% block content %}
 <div class="page-header">
-  <h1>📦 Registrar Entrega — {{ sol.cuadrilla.movil }}</h1>
-  <a href="{% url 'almacen_panel' %}" class="btn">← Volver</a>
-</div>
-
-<div class="card" style="margin-bottom:1rem;background:#f0fdf4;border:1px solid #86efac">
-  <div style="font-size:.9rem;color:#15803d">
-    <strong>📋 Cuadrilla:</strong> {{ sol.cuadrilla.movil }} — {{ sol.cuadrilla.nombre }} &nbsp;|&nbsp;
-    <strong>📅 Fecha:</strong> {{ sol.fecha_solicitud|date:"d/m/Y" }} &nbsp;|&nbsp;
-    <strong>👤 Supervisor:</strong> {{ sol.cuadrilla.supervisor|default:"—" }}
+  <h1>🏪 Panel de Almacén</h1>
+  <div class="actions">
+    {% if request.user.is_superuser %}
+    <a href="{% url 'materiales_panel' %}" class="btn">← Centro Técnico</a>
+    <a href="{% url 'gestion_materiales' %}" class="btn btn-primary">⚙ Gestionar Materiales</a>
+    {% endif %}
   </div>
 </div>
 
-<div class="card">
-  <form method="post">
-    {% csrf_token %}
-    {% for item in sol.items.all %}
-    <div class="entrega-row" style="border:1px solid #e2e8f0;border-radius:8px;padding:1rem;margin-bottom:.8rem">
-      <div class="entrega-material" style="font-weight:700;font-size:.95rem;margin-bottom:.3rem">
-        {{ item.material.descripcion }}
-      </div>
-      <div class="entrega-qty" style="color:#64748b;font-size:.85rem;margin-bottom:.8rem">
-        Solicitado: <strong>{{ item.cantidad_solicitada }} {{ item.material.unidad }}</strong>
-        &nbsp;|&nbsp; Código: <code>{{ item.material.codigo }}</code>
-      </div>
-      <div style="display:flex;gap:1rem;flex-wrap:wrap">
-        <div class="form-group" style="margin:0;flex:1;min-width:140px">
-          <label style="font-size:.82rem">Cantidad entregada</label>
-          <input type="number" name="cantidad_{{ item.pk }}"
-            value="{{ item.cantidad_entregada }}"
-            min="0" step="0.01" class="form-control">
-        </div>
-        <div class="form-group" style="margin:0;flex:1;min-width:180px">
-          <label style="font-size:.82rem">Estado</label>
-          <select name="estado_{{ item.pk }}" class="form-control">
-            <option value="alistado" {% if item.estado_entrega == 'alistado' %}selected{% endif %}>
-              📦 Alistado — Listo para recoger
-            </option>
-            <option value="entregado" {% if item.estado_entrega == 'entregado' %}selected{% endif %}>
-              ✅ Entregado
-            </option>
-            <option value="cerrado" {% if item.estado_entrega == 'cerrado' %}selected{% endif %}>
-              🔒 Cerrado
-            </option>
-          </select>
-        </div>
-      </div>
+{% if not solicitudes %}
+<div class="card"><p style="text-align:center;color:#94a3b8;padding:2rem">No hay solicitudes aprobadas pendientes de entrega.</p></div>
+{% endif %}
+
+{% for sol in solicitudes %}
+<div class="card" style="margin-bottom:1rem">
+  <div class="card-header">
+    <div>
+      <strong>{{ sol.cuadrilla.movil }}</strong> — {{ sol.cuadrilla.nombre }}
+      <span class="badge badge-{{ sol.estado }}" style="margin-left:.5rem">{{ sol.get_estado_display }}</span>
     </div>
-    {% endfor %}
-    <div style="margin-top:1.2rem;text-align:right">
-      <button type="submit" class="btn btn-green" style="padding:.7rem 1.5rem;font-size:1rem">
-        ✔ Confirmar
-      </button>
+    <div style="display:flex;align-items:center;gap:.5rem">
+      <span style="color:#94a3b8;font-size:.8rem">{{ sol.fecha_solicitud|date:"d/m/Y" }}</span>
+      <a href="{% url 'almacen_entregar' sol.pk %}" class="btn btn-orange btn-sm">📦 Alistar</a>
     </div>
-  </form>
+  </div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Material</th><th>Cant. Solicitada</th><th>Cant. Alistada</th><th>Estado</th></tr></thead>
+      <tbody>
+      {% for item in sol.items.all %}
+      <tr>
+        <td>{{ item.material.descripcion }}</td>
+        <td>{{ item.cantidad_solicitada }} {{ item.material.unidad }}</td>
+        <td>{{ item.cantidad_entregada }}</td>
+        <td>
+          <span class="badge badge-{% if item.estado_entrega == 'entregado' %}aprobada{% elif item.estado_entrega == 'alistado' %}en_entrega{% elif item.estado_entrega == 'cerrado' %}cerrada{% else %}pendiente{% endif %}">
+            {{ item.get_estado_entrega_display }}
+          </span>
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
+{% endfor %}
+
+{% if historial %}
+<div class="card" style="margin-top:2rem">
+  <div class="card-header">
+    <h2>📜 Historial de Entregas</h2>
+  </div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Móvil</th>
+          <th>Técnico</th>
+          <th>Items</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for sol in historial %}
+      <tr id="fila-{{ sol.pk }}">
+        <td>{{ sol.fecha_solicitud|date:"d/m/Y" }}</td>
+        <td><strong>{{ sol.cuadrilla.movil }}</strong></td>
+        <td>{{ sol.cuadrilla.nombre }}</td>
+        <td>{{ sol.total_items }}</td>
+        <td><span class="badge badge-{{ sol.estado }}">{{ sol.get_estado_display }}</span></td>
+        <td>
+          <div style="display:flex;gap:.4rem;align-items:center">
+            <a href="{% url 'descargar_pdf_solicitud' sol.pk %}" class="btn btn-sm btn-primary" title="Descargar PDF">⬇ PDF</a>
+            <button onclick="ocultarSolicitud('{{ sol.pk }}')"
+              style="background:none;border:1px solid #fca5a5;border-radius:6px;cursor:pointer;color:#dc2626;font-size:.85rem;padding:.2rem .5rem"
+              title="Quitar de la lista">✕ Ocultar</button>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<script>
+const csrf = '{{ csrf_token }}';
+async function ocultarSolicitud(pk) {
+  if (!confirm('¿Quitar esta solicitud de la lista de almacén?')) return;
+  const res = await fetch(`/materiales/almacen/${pk}/ocultar/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': csrf}
+  });
+  const data = await res.json();
+  if (data.ok) {
+    const fila = document.getElementById(`fila-${pk}`);
+    if (fila) fila.style.display = 'none';
+  }
+}
+</script>
 {% endblock %}

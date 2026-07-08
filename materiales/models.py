@@ -54,6 +54,7 @@ class Solicitud(models.Model):
     fecha_aprobacion = models.DateTimeField(null=True, blank=True)
     creado = models.DateTimeField(auto_now_add=True)
     actualizado = models.DateTimeField(auto_now=True)
+    oculto_almacen = models.BooleanField(default=False)
 
     class Meta:
         verbose_name = 'Solicitud'

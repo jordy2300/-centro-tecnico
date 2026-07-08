@@ -114,9 +114,10 @@ def almacen_panel(request):
     ).select_related('cuadrilla').prefetch_related('items__material').order_by('cuadrilla__movil', 'fecha_solicitud')
     
     historial = Solicitud.objects.filter(
-        estado__in=['entregada', 'parcial', 'cerrada']
+    estado__in=['entregada', 'parcial', 'cerrada'],
+    oculto_almacen=False
     ).select_related('cuadrilla').prefetch_related('items__material').order_by('-actualizado')[:50]
-    
+
     return render(request, 'materiales/almacen_panel.html', {
         'solicitudes': pendientes,
         'historial': historial,
@@ -126,32 +127,47 @@ def almacen_panel(request):
 def almacen_entregar(request, pk):
     sol = get_object_or_404(Solicitud, pk=pk)
     if request.method == 'POST':
+        accion = request.POST.get('accion', 'alistar')
+
+        if accion == 'cerrar':
+            sol.estado = 'cerrada'
+            sol.save()
+            messages.warning(request, 'Solicitud cerrada.')
+            return redirect('almacen_panel')
+
+        # Guardar cantidades entregadas
         for item in sol.items.all():
-            estado_e = request.POST.get(f'estado_{item.pk}', 'pendiente')
             cant = request.POST.get(f'cantidad_{item.pk}', '0')
             try:
                 item.cantidad_entregada = float(cant)
             except ValueError:
                 item.cantidad_entregada = 0
-            item.estado_entrega = estado_e
+            item.estado_entrega = 'alistado'
             item.save()
 
-        # Determinar estado de solicitud
-        
-        items = sol.items.all()
-        if all(i.estado_entrega == 'entregado' for i in items):
-            sol.estado = 'entregada'
-        elif all(i.estado_entrega == 'cerrado' for i in items):
-            sol.estado = 'cerrada'
-        elif any(i.estado_entrega == 'alistado' for i in items):
-            sol.estado = 'alistado'
-        else:
-            sol.estado = 'parcial'
+        sol.estado = 'alistado'
         sol.save()
-        messages.success(request, 'Entrega registrada.')
+        messages.success(request, 'Solicitud marcada como alistada. El técnico debe confirmar la recepción.')
         return redirect('almacen_panel')
-    return render(request, 'materiales/almacen_entregar.html', {'sol': sol})
 
+    return render(request, 'materiales/almacen_entregar.html', {'sol': sol})
+def tecnico_confirmar_recepcion(request, pk):
+    cuadrilla = _get_cuadrilla(request)
+    if not cuadrilla:
+        return redirect('tecnico_login')
+    sol = get_object_or_404(Solicitud, pk=pk, cuadrilla=cuadrilla)
+    if sol.estado != 'alistado':
+        messages.error(request, 'Esta solicitud no está lista para confirmar.')
+        return redirect('tecnico_solicitudes')
+    if request.method == 'POST':
+        for item in sol.items.all():
+            item.estado_entrega = 'entregado'
+            item.save()
+        sol.estado = 'entregada'
+        sol.save()
+        messages.success(request, '¡Recepción confirmada! Gracias.')
+        return redirect('tecnico_solicitudes')
+    return render(request, 'materiales/tecnico_confirmar.html', {'sol': sol})
 
 # ── API BÚSQUEDA MATERIALES ───────────────────────────────────────────────────
 
@@ -465,3 +481,114 @@ def eliminar_cuadrilla(request, pk):
     cuadrilla.delete()
     messages.success(request, f'Cuadrilla {movil} eliminada.')
     return redirect('gestion_cuadrillas')
+
+
+@login_required
+@require_POST
+def ocultar_solicitud_almacen(request, pk):
+    sol = get_object_or_404(Solicitud, pk=pk)
+    sol.oculto_almacen = True
+    sol.save()
+    return JsonResponse({'ok': True})
+
+
+@login_required
+def descargar_pdf_solicitud(request, pk):
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import cm
+    from io import BytesIO
+
+    sol = get_object_or_404(Solicitud, pk=pk)
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter,
+                            rightMargin=1.5*cm, leftMargin=1.5*cm,
+                            topMargin=1.5*cm, bottomMargin=1.5*cm)
+
+    styles = getSampleStyleSheet()
+    titulo = ParagraphStyle('titulo', fontSize=13, fontName='Helvetica-Bold', alignment=1, spaceAfter=4)
+    subtitulo = ParagraphStyle('sub', fontSize=10, fontName='Helvetica-Bold', alignment=1, spaceAfter=6)
+    normal = ParagraphStyle('normal', fontSize=9, fontName='Helvetica', spaceAfter=3)
+    azul = colors.HexColor('#1a3a5c')
+
+    elementos = []
+
+    # Encabezado empresa
+    elementos.append(Paragraph('HESEGO', titulo))
+    elementos.append(Paragraph('NIT: 900502031-8', subtitulo))
+    elementos.append(Paragraph('Cúcuta', subtitulo))
+    elementos.append(Spacer(1, 0.3*cm))
+    elementos.append(Paragraph('SALIDA DE ALMACÉN', titulo))
+    elementos.append(Spacer(1, 0.4*cm))
+
+    # Info solicitud
+    info_data = [
+        ['Fecha Movimiento:', sol.fecha_solicitud.strftime('%d/%m/%Y'),
+         'Cuadrilla:', sol.cuadrilla.movil],
+        ['Concepto:', 'ASIGNACIÓN DE MATERIALES', '', ''],
+        ['Bodega:', f'{sol.cuadrilla.supervisor or "—"} - {sol.cuadrilla.nombre}',
+         'Técnico:', sol.cuadrilla.nombre],
+    ]
+    tabla_info = Table(info_data, colWidths=[3.5*cm, 6*cm, 3*cm, 5*cm])
+    tabla_info.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ('FONTNAME', (2, 0), (2, -1), 'Helvetica-Bold'),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+    ]))
+    elementos.append(tabla_info)
+    elementos.append(Spacer(1, 0.5*cm))
+
+    # Tabla de materiales
+    headers = ['POS', 'Código', 'Descripción del Material', 'UM', 'Cant. Solicitada', 'Cant. Entregada']
+    data = [headers]
+    for idx, item in enumerate(sol.items.select_related('material'), 1):
+        data.append([
+            str(idx),
+            item.material.codigo,
+            item.material.descripcion,
+            item.material.unidad,
+            str(item.cantidad_solicitada),
+            str(item.cantidad_entregada),
+        ])
+
+    tabla = Table(data, colWidths=[1*cm, 3*cm, 8*cm, 1.5*cm, 2.5*cm, 2.5*cm])
+    tabla.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), azul),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 8),
+        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('ALIGN', (2, 1), (2, -1), 'LEFT'),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f1f5f9')]),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+    ]))
+    elementos.append(tabla)
+    elementos.append(Spacer(1, 1.5*cm))
+
+    # Firmas
+    firmas = [['Entregó', '', 'Recibió']]
+    tabla_firmas = Table(firmas, colWidths=[6*cm, 5*cm, 6*cm])
+    tabla_firmas.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('LINEABOVE', (0, 0), (0, 0), 1, colors.black),
+        ('LINEABOVE', (2, 0), (2, 0), 1, colors.black),
+        ('TOPPADDING', (0, 0), (-1, -1), 30),
+    ]))
+    elementos.append(tabla_firmas)
+
+    doc.build(elementos)
+    buffer.seek(0)
+    nombre = f"salida_almacen_{sol.cuadrilla.movil}_{sol.fecha_solicitud}.pdf"
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{nombre}"'
+    return response

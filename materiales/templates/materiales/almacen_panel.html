@@ -3,11 +3,12 @@
 {% block content %}
 <div class="page-header">
   <h1>🏪 Panel de Almacén</h1>
-  {% if request.user.is_superuser %}
-  <a href="{% url 'materiales_panel' %}" class="btn">← Centro Técnico</a>
-
-  <a href="{% url 'gestion_materiales' %}" class="btn btn-primary">⚙ Gestionar Materiales</a>
-  {% endif %}
+  <div class="actions">
+    {% if request.user.is_superuser %}
+    <a href="{% url 'materiales_panel' %}" class="btn">← Centro Técnico</a>
+    <a href="{% url 'gestion_materiales' %}" class="btn btn-primary">⚙ Gestionar Materiales</a>
+    {% endif %}
+  </div>
 </div>
 
 {% if not solicitudes %}
@@ -23,19 +24,23 @@
     </div>
     <div style="display:flex;align-items:center;gap:.5rem">
       <span style="color:#94a3b8;font-size:.8rem">{{ sol.fecha_solicitud|date:"d/m/Y" }}</span>
-      <a href="{% url 'almacen_entregar' sol.pk %}" class="btn btn-orange btn-sm">📦 Registrar Entrega</a>
+      <a href="{% url 'almacen_entregar' sol.pk %}" class="btn btn-orange btn-sm">📦 Alistar</a>
     </div>
   </div>
   <div class="table-wrap">
     <table class="table">
-      <thead><tr><th>Material</th><th>Cant. Solicitada</th><th>Cant. Entregada</th><th>Estado</th></tr></thead>
+      <thead><tr><th>Material</th><th>Cant. Solicitada</th><th>Cant. Alistada</th><th>Estado</th></tr></thead>
       <tbody>
       {% for item in sol.items.all %}
       <tr>
         <td>{{ item.material.descripcion }}</td>
         <td>{{ item.cantidad_solicitada }} {{ item.material.unidad }}</td>
         <td>{{ item.cantidad_entregada }}</td>
-        <td><span class="badge badge-{% if item.estado_entrega == 'entregado' %}aprobada{% elif item.estado_entrega == 'no_disponible' %}rechazado{% else %}pendiente{% endif %}">{{ item.get_estado_entrega_display }}</span></td>
+        <td>
+          <span class="badge badge-{% if item.estado_entrega == 'entregado' %}aprobada{% elif item.estado_entrega == 'alistado' %}en_entrega{% elif item.estado_entrega == 'cerrado' %}cerrada{% else %}pendiente{% endif %}">
+            {{ item.get_estado_entrega_display }}
+          </span>
+        </td>
       </tr>
       {% endfor %}
       </tbody>
@@ -51,15 +56,32 @@
   </div>
   <div class="table-wrap">
     <table class="table">
-      <thead><tr><th>Fecha</th><th>Móvil</th><th>Técnico</th><th>Items</th><th>Estado</th></tr></thead>
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Móvil</th>
+          <th>Técnico</th>
+          <th>Items</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
       <tbody>
       {% for sol in historial %}
-      <tr>
+      <tr id="fila-{{ sol.pk }}">
         <td>{{ sol.fecha_solicitud|date:"d/m/Y" }}</td>
         <td><strong>{{ sol.cuadrilla.movil }}</strong></td>
         <td>{{ sol.cuadrilla.nombre }}</td>
         <td>{{ sol.total_items }}</td>
         <td><span class="badge badge-{{ sol.estado }}">{{ sol.get_estado_display }}</span></td>
+        <td>
+          <div style="display:flex;gap:.4rem;align-items:center">
+            <a href="{% url 'descargar_pdf_solicitud' sol.pk %}" class="btn btn-sm btn-primary" title="Descargar PDF">⬇ PDF</a>
+            <button onclick="ocultarSolicitud('{{ sol.pk }}')"
+              style="background:none;border:1px solid #fca5a5;border-radius:6px;cursor:pointer;color:#dc2626;font-size:.85rem;padding:.2rem .5rem"
+              title="Quitar de la lista">✕ Ocultar</button>
+          </div>
+        </td>
       </tr>
       {% endfor %}
       </tbody>
@@ -67,4 +89,20 @@
   </div>
 </div>
 {% endif %}
+
+<script>
+const csrf = '{{ csrf_token }}';
+async function ocultarSolicitud(pk) {
+  if (!confirm('¿Quitar esta solicitud de la lista de almacén?')) return;
+  const res = await fetch(`/materiales/almacen/${pk}/ocultar/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': csrf}
+  });
+  const data = await res.json();
+  if (data.ok) {
+    const fila = document.getElementById(`fila-${pk}`);
+    if (fila) fila.style.display = 'none';
+  }
+}
+</script>
 {% endblock %}
