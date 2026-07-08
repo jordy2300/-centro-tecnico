@@ -29,7 +29,14 @@
   </div>
   <div class="table-wrap">
     <table class="table">
-      <thead><tr><th>Material</th><th>Cant. Solicitada</th><th>Cant. Alistada</th><th>Estado</th></tr></thead>
+      <thead>
+        <tr>
+          <th>Material</th>
+          <th>Cant. Solicitada</th>
+          <th>Cant. Alistada</th>
+          <th>Estado</th>
+        </tr>
+      </thead>
       <tbody>
       {% for item in sol.items.all %}
       <tr>
@@ -75,11 +82,12 @@
         <td>{{ sol.total_items }}</td>
         <td><span class="badge badge-{{ sol.estado }}">{{ sol.get_estado_display }}</span></td>
         <td>
-          <div style="display:flex;gap:.4rem;align-items:center">
-            <a href="{% url 'descargar_pdf_solicitud' sol.pk %}" class="btn btn-sm btn-primary" title="Descargar PDF">⬇ PDF</a>
+          <div style="display:flex;gap:.4rem;align-items:center;flex-wrap:wrap">
+            <a href="{% url 'descargar_pdf_solicitud' sol.pk %}" class="btn btn-sm btn-primary">⬇ PDF</a>
             <button onclick="ocultarSolicitud('{{ sol.pk }}')"
-              style="background:none;border:1px solid #fca5a5;border-radius:6px;cursor:pointer;color:#dc2626;font-size:.85rem;padding:.2rem .5rem"
-              title="Quitar de la lista">✕ Ocultar</button>
+              style="background:none;border:1px solid #fca5a5;border-radius:6px;cursor:pointer;color:#dc2626;font-size:.85rem;padding:.2rem .5rem">
+              ✕ Ocultar
+            </button>
           </div>
         </td>
       </tr>
@@ -100,8 +108,7 @@ async function ocultarSolicitud(pk) {
   });
   const data = await res.json();
   if (data.ok) {
-    const fila = document.getElementById(`fila-${pk}`);
-    if (fila) fila.style.display = 'none';
+    document.getElementById(`fila-${pk}`).style.display = 'none';
   }
 }
 </script>

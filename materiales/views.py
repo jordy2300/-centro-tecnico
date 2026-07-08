@@ -72,7 +72,7 @@ def aprobar_solicitud(request, pk):
     sol.fecha_aprobacion = timezone.now()
     sol.save()
     messages.success(request, f'Solicitud {sol.id_corto()} aprobada.')
-    return redirect('lista_solicitudes')
+    return redirect('materiales_panel')
 
 
 @login_required
@@ -592,3 +592,11 @@ def descargar_pdf_solicitud(request, pk):
     response = HttpResponse(buffer, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{nombre}"'
     return response
+
+@login_required
+@require_POST
+def eliminar_solicitud(request, pk):
+    sol = get_object_or_404(Solicitud, pk=pk)
+    sol.delete()
+    messages.success(request, 'Solicitud eliminada.')
+    return redirect('materiales_panel')

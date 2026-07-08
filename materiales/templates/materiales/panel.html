@@ -32,14 +32,23 @@
         <td>{{ s.fecha_solicitud|date:"d/m/Y" }}</td>
         <td>{{ s.total_items }}</td>
         <td><span class="badge badge-{{ s.estado }}">{{ s.get_estado_display }}</span></td>
-        <td>
+
+
+        <td style="display:flex;gap:.3rem;flex-wrap:wrap">
           <a href="{% url 'detalle_solicitud' s.pk %}" class="btn btn-sm">Ver</a>
+          <a href="{% url 'descargar_pdf_solicitud' s.pk %}" class="btn btn-sm btn-primary">⬇ PDF</a>
           {% if s.estado == 'pendiente' %}
-          <form method="post" action="{% url 'aprobar_solicitud' s.pk %}" style="display:inline">
+          <form method="post" action="{% url 'aprobar_solicitud' s.pk %}">
             {% csrf_token %}<button class="btn btn-sm btn-green">✔ Aprobar</button>
           </form>
           {% endif %}
-        </td>
+          <form method="post" action="{% url 'eliminar_solicitud' s.pk %}" onsubmit="return confirm('¿Eliminar esta solicitud de todos los paneles?')">
+            {% csrf_token %}<button class="btn btn-sm btn-red">🗑</button>
+          </form>
+        </td> 
+
+
+
       </tr>
       {% empty %}
       <tr class="empty-row"><td colspan="7">No hay solicitudes todavía.</td></tr>

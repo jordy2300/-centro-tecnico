@@ -36,4 +36,8 @@ urlpatterns = [
     path('tecnico/<uuid:pk>/confirmar/', views.tecnico_confirmar_recepcion, name='tecnico_confirmar_recepcion'),
     path('almacen/<uuid:pk>/ocultar/', views.ocultar_solicitud_almacen, name='ocultar_solicitud_almacen'),
     path('almacen/<uuid:pk>/pdf/', views.descargar_pdf_solicitud, name='descargar_pdf_solicitud'),
+    path('solicitudes/<uuid:pk>/eliminar/', views.eliminar_solicitud, name='eliminar_solicitud'),
+
+
+    
 ]   
