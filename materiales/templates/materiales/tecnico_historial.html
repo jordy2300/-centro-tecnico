@@ -19,11 +19,30 @@
     <span style="font-weight:700">{{ sol.fecha_solicitud|date:"d/m/Y" }}</span>
     <span class="badge badge-{{ sol.estado }}">{{ sol.get_estado_display }}</span>
   </div>
-  {% for item in sol.items.all %}
-  <div style="font-size:.83rem;padding:.3rem 0;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between">
-    <span>{{ item.material.descripcion }}</span>
-    <span style="font-weight:600">× {{ item.cantidad_solicitada }}</span>
-  </div>
+
+
+
+{% for item in sol.items.all %}
+<div style="font-size:.83rem;padding:.3rem 0;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center">
+  <span>{{ item.material.descripcion }}</span>
+  <span style="text-align:right">
+    {% if item.estado_entrega == 'entregado' or item.estado_entrega == 'cerrado' %}
+      <span style="font-weight:600;color:#15803d">× {{ item.cantidad_entregada }}</span>
+      {% if item.cantidad_entregada != item.cantidad_solicitada %}
+        <br><span style="font-size:.72rem;color:#94a3b8">(pedido: {{ item.cantidad_solicitada }})</span>
+      {% endif %}
+    {% elif item.estado_entrega == 'alistado' %}
+      <span style="font-weight:600;color:#2563eb">× {{ item.cantidad_solicitada }} (alistado)</span>
+    {% else %}
+      <span style="font-weight:600;color:#94a3b8">× {{ item.cantidad_solicitada }} (pendiente)</span>
+    {% endif %}
+  </span>
+</div>
+{% endfor %}
+
+
+
+
   {% endfor %}
   {% if sol.observaciones %}
   <div style="margin-top:.5rem;font-size:.8rem;color:#64748b;background:#f8fafc;padding:.4rem;border-radius:4px">📝 {{ sol.observaciones }}</div>

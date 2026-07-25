@@ -2,8 +2,7 @@ from pathlib import Path
 import os
 import dj_database_url
 
-DATABASE_URL = os.environ.get('DATABASE_URL', 'postgresql://centro_tecnico_db_user:8Qk69euAK11Ht4c83VkYKDHBkiXary4y@dpg-d8p00rs8aovs73ascmb0-a.oregon-postgres.render.com/centro_tecnico_db')
-
+DATABASE_URL = os.environ.get('DATABASE_URL', 'postgresql://postgres.svwqwzvlrcerahriglnr:$jj3219200676@aws-1-us-west-2.pooler.supabase.com:6543/postgres')
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY', 'centro-tecnico-dev-key-2024')
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
@@ -21,6 +20,8 @@ INSTALLED_APPS = [
     'materiales',
     'correos',
 ]
+
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -86,3 +87,5 @@ SMS_BACKEND = os.environ.get('SMS_BACKEND', 'console')
 TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID', '')
 TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN', '')
 TWILIO_PHONE_NUMBER = os.environ.get('TWILIO_PHONE_NUMBER', '')
+
+
