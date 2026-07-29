@@ -528,7 +528,7 @@ def descargar_pdf_solicitud(request, pk):
         ['Fecha Movimiento:', sol.fecha_solicitud.strftime('%d/%m/%Y'),
          'Cuadrilla:', sol.cuadrilla.movil],
         ['Concepto:', 'ASIGNACIÓN DE MATERIALES', '', ''],
-        ['Bodega:', f'{sol.cuadrilla.supervisor or "—"} - {sol.cuadrilla.nombre}',
+        ['Supervisor:', f'{sol.cuadrilla.supervisor or "—"}',
          'Técnico:', sol.cuadrilla.nombre],
     ]
     tabla_info = Table(info_data, colWidths=[3.5*cm, 6*cm, 3*cm, 5*cm])

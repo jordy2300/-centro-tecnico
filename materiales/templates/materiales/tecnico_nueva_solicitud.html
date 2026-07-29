@@ -39,20 +39,20 @@
     <div class="form-group">
       <label>Tipo</label>
       <select id="acobro-input" class="form-control">
-        <option value="sin_cobro">Sin Cobro</option>
+        <option value="sin_cobro">No Cobro</option>
         <option value="cobro">A Cobro</option>
       </select>
     </div>
   </div>
   <div class="form-group">
     <label>OBSERVACION</label>
-    <input type="text" id="serie-input" class="form-control" placeholder="Número de serie…">
+    <input type="text" id="serie-input" class="form-control" placeholder="agrega material no encontrado">
   </div>
   <button type="button" class="btn btn-primary btn-block" onclick="agregarItem()">+ Agregar a la lista</button>
 </div>
 
 <div class="mobile-card-tech" id="lista-card">
-  <h2>📋 Lista de Materiales <span id="count-badge" style="background:#e0f2fe;color:#0369a1;border-radius:20px;padding:.1rem .5rem;font-size:.75rem">0</span></h2>
+  <h2>Lista de Materiales <span id="count-badge" style="background:#e0f2fe;color:#0369a1;border-radius:20px;padding:.1rem .5rem;font-size:.75rem">0</span></h2>
   <div id="item-list-container">
     <p style="text-align:center;color:#94a3b8;font-size:.85rem;padding:.5rem" id="empty-msg">Aún no ha agregado materiales.</p>
   </div>
@@ -60,7 +60,7 @@
 
 <div style="padding:0 1rem 2rem">
   <button type="submit" class="btn btn-green btn-block" style="padding:.8rem;font-size:1rem" onclick="return validarEnvio()">
-    {% if sol %}💾 Actualizar Solicitud{% else %}📤 Enviar Solicitud{% endif %}
+    {% if sol %}💾 Actualizar Solicitud{% else %} Enviar Solicitud{% endif %}
   </button>
 </div>
 </form>
