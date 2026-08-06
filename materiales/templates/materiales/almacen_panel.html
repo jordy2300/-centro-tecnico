@@ -22,10 +22,15 @@
       <strong>{{ sol.cuadrilla.movil }}</strong> — {{ sol.cuadrilla.nombre }}
       <span class="badge badge-{{ sol.estado }}" style="margin-left:.5rem">{{ sol.get_estado_display }}</span>
     </div>
+
+
+
     <div style="display:flex;align-items:center;gap:.5rem">
-      <span style="color:#94a3b8;font-size:.8rem">{{ sol.fecha_solicitud|date:"d/m/Y" }}</span>
-      <a href="{% url 'almacen_entregar' sol.pk %}" class="btn btn-orange btn-sm">📦 Alistar</a>
-    </div>
+        <span style="color:#94a3b8;font-size:.8rem">{{ sol.fecha_solicitud|date:"d/m/Y" }}</span>
+        <a href="{% url 'descargar_pdf_solicitud' sol.pk %}" class="btn btn-primary btn-sm" target="_blank">⬇ PDF</a>
+        <a href="{% url 'almacen_entregar' sol.pk %}" class="btn btn-orange btn-sm">📦 Alistar</a>
+      </div>
+    
   </div>
   <div class="table-wrap">
     <table class="table">

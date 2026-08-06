@@ -7,7 +7,7 @@
     {% if sol.estado == 'pendiente' %}
     <form method="post" action="{% url 'aprobar_solicitud' sol.pk %}">{% csrf_token %}<button class="btn btn-green">✔ Aprobar Solicitud</button></form>
     {% endif %}
-    <a href="{% url 'lista_solicitudes' %}" class="btn">← Volver</a>
+
   </div>
 </div>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">

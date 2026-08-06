@@ -46,14 +46,15 @@
   {% for item in sol.items.all %}
   <div style="display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid #f1f5f9;font-size:.85rem">
     <span>{{ item.material.descripcion }}</span>
-    <span style="font-weight:600;white-space:nowrap;margin-left:.5rem">× {{ item.cantidad_solicitada }}</span>
+    <span style="font-weight:600;white-space:nowrap;margin-left:.5rem">
+      {% if sol.estado == 'entregada' or sol.estado == 'parcial' or sol.estado == 'cerrada' %}
+        × {{ item.cantidad_entregada|floatformat:0 }}
+      {% else %}
+        × {{ item.cantidad_solicitada|floatformat:0 }}
+      {% endif %}
+    </span>
   </div>
   {% endfor %}
-
-
-
-
-  
   {% if sol.puede_editar %}
   <div style="margin-top:.8rem">
     <a href="{% url 'tecnico_editar_solicitud' sol.pk %}" class="btn btn-sm">✏ Editar</a>
