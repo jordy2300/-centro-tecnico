@@ -20,7 +20,7 @@ def panel(request):
     pendientes = Solicitud.objects.filter(estado='pendiente').count()
     aprobadas = Solicitud.objects.filter(estado='aprobada').count()
     en_entrega = Solicitud.objects.filter(estado='en_entrega').count()
-    recientes = Solicitud.objects.select_related('cuadrilla').all()[:10]
+    recientes = Solicitud.objects.select_related('cuadrilla').all()[:100]
     return render(request, 'materiales/panel.html', {
         'total': total, 'pendientes': pendientes,
         'aprobadas': aprobadas, 'en_entrega': en_entrega,
@@ -322,7 +322,6 @@ def gestion_cuadrillas(request):
     cuadrillas = Cuadrilla.objects.all()
     return render(request, 'materiales/cuadrillas.html', {'cuadrillas': cuadrillas})
 
-
 @login_required
 @require_POST
 def crear_cuadrilla(request):
@@ -330,19 +329,22 @@ def crear_cuadrilla(request):
     nombre = request.POST.get('nombre', '').strip()
     movil = request.POST.get('movil', '').strip()
     supervisor = request.POST.get('Supervisor', '').strip()
-    if codigo and nombre and movil:
-        Cuadrilla.objects.update_or_create(
-            codigo=codigo,
-            defaults={
-                'nombre': nombre,
-                'movil': movil,
-                'supervisor': supervisor,
-                'activo': True
-            }
-        )
-        messages.success(request, f'Cuadrilla {movil} guardada.')
-    else:
+    if not (codigo and nombre and movil):
         messages.error(request, 'Complete todos los campos.')
+        return redirect('gestion_cuadrillas')
+
+    if Cuadrilla.objects.filter(codigo=codigo).exists():
+        messages.error(request, f'El código {codigo} ya está en uso por otra cuadrilla. Use un código diferente.')
+        return redirect('gestion_cuadrillas')
+
+    Cuadrilla.objects.create(
+        codigo=codigo,
+        nombre=nombre,
+        movil=movil,
+        supervisor=supervisor,
+        activo=True
+    )
+    messages.success(request, f'Cuadrilla {movil} creada correctamente.')
     return redirect('gestion_cuadrillas')
 
 
@@ -472,14 +474,18 @@ def editar_cuadrilla(request, pk):
     messages.success(request, f'Cuadrilla {cuadrilla.movil} actualizada.')
     return redirect('gestion_cuadrillas')
 
-
 @login_required
 @require_POST
 def eliminar_cuadrilla(request, pk):
     cuadrilla = get_object_or_404(Cuadrilla, pk=pk)
     movil = cuadrilla.movil
-    cuadrilla.delete()
-    messages.success(request, f'Cuadrilla {movil} eliminada.')
+    if cuadrilla.solicitud_set.exists():
+        cuadrilla.activo = False
+        cuadrilla.save()
+        messages.warning(request, f'Cuadrilla {movil} tiene solicitudes asociadas, no se puede eliminar. Se desactivó en su lugar.')
+    else:
+        cuadrilla.delete()
+        messages.success(request, f'Cuadrilla {movil} eliminada.')
     return redirect('gestion_cuadrillas')
 
 

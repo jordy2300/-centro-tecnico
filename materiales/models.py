@@ -71,7 +71,8 @@ class Solicitud(models.Model):
         return self.items.count()
 
     def puede_editar(self):
-        return self.estado == 'pendiente'
+    # Puede editar mientras no se haya alistado o entregado
+        return self.estado not in ['alistado', 'entregada', 'parcial', 'cerrada']
 
 
 class ItemSolicitud(models.Model):
